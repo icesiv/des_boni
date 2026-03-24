@@ -1,45 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-
-const heroImages = [
-  {
-    src: '/assets/asset_1.jpg',
-    alt: 'Robotic dog 3D render in forest environment',
-  },
-  {
-    src: '/assets/asset_2.jpg',
-    alt: 'Character with fire hand 3D render',
-  },
-  {
-    src: '/assets/asset_3.jpg',
-    alt: 'Orc warrior character 3D render',
-  },
-  {
-    src: '/assets/asset_4.jpg',
-    alt: 'Sci-fi gauntlet 3D model',
-  },
-  {
-    src: '/assets/asset_5.jpg',
-    alt: 'Leather boot 3D model',
-  },
-  {
-    src: '/assets/asset_6.jpg',
-    alt: 'Brown robe clothing 3D model',
-  },
-  {
-    src: '/assets/asset_7.jpg',
-    alt: 'Wireframe glove 3D model',
-  },
-  {
-    src: '/assets/asset_8.jpg',
-    alt: 'Fire hand character shop view',
-  },
-];
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 
 export function HeroCarousel() {
+  const [heroImages, setHeroImages] = useState<{src: string, alt: string}[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/hero-images')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setHeroImages(data.map(url => ({ src: url, alt: url.split('/').pop() || 'Slide' })));
+        }
+      })
+      .catch(err => {
+        console.error('Failed to load hero images:', err);
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   const goToSlide = useCallback((index: number) => {
     if (isTransitioning) return;
@@ -49,19 +30,21 @@ export function HeroCarousel() {
   }, [isTransitioning]);
 
   const nextSlide = useCallback(() => {
+    if (heroImages.length === 0) return;
     goToSlide((currentSlide + 1) % heroImages.length);
-  }, [currentSlide, goToSlide]);
+  }, [currentSlide, goToSlide, heroImages.length]);
 
   const prevSlide = useCallback(() => {
+    if (heroImages.length === 0) return;
     goToSlide((currentSlide - 1 + heroImages.length) % heroImages.length);
-  }, [currentSlide, goToSlide]);
+  }, [currentSlide, goToSlide, heroImages.length]);
 
-  // Auto-advance
+  // Auto-advance — re-fires when images are loaded
   useEffect(() => {
-    if (isPaused) return;
+    if (isPaused || heroImages.length === 0) return;
     const interval = setInterval(nextSlide, 5000);
     return () => clearInterval(interval);
-  }, [isPaused, nextSlide]);
+  }, [isPaused, nextSlide, heroImages.length]);
 
   return (
     <section
@@ -69,18 +52,24 @@ export function HeroCarousel() {
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
         {/* Carousel Container with 3D perspective */}
         <div
-          className="relative overflow-hidden rounded-lg"
-          style={{
-            perspective: '1200px',
-            aspectRatio: '16/9',
-            maxHeight: '500px',
-          }}
+          className="relative overflow-hidden h-[60vh] bg-[#0a1018]"
         >
-          {/* Slides */}
-          <div className="relative w-full h-full">
+          {loading ? (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Loader2 className="w-12 h-12 text-[#4a9eff] animate-spin" />
+            </div>
+          ) : heroImages.length === 0 ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-center px-4">
+              <div className="text-6xl text-white/20 mb-2">🖼️</div>
+              <p className="text-white/60 text-lg font-medium">No hero images found</p>
+              <p className="text-white/40 text-sm">Go to the <a href="/admin" className="text-[#4a9eff] hover:underline">Admin Panel</a> to upload images.</p>
+            </div>
+          ) : (
+            <>
+              <div className="relative w-full h-full">
             {heroImages.map((image, index) => {
               const isActive = index === currentSlide;
               const isPrev = index === (currentSlide - 1 + heroImages.length) % heroImages.length;
@@ -89,30 +78,36 @@ export function HeroCarousel() {
               return (
                 <div
                   key={index}
-                  className={`absolute inset-0 transition-all duration-600 ${
-                    isActive ? 'z-20' : 'z-10'
-                  }`}
+                  className={`absolute inset-0 transition-all duration-600 ${isActive ? 'z-20' : 'z-10'
+                    }`}
                   style={{
                     transform: isActive
                       ? 'rotateY(0deg) translateZ(100px)'
                       : isPrev
-                      ? 'rotateY(-90deg) translateZ(-100px)'
-                      : isNext
-                      ? 'rotateY(90deg) translateZ(-100px)'
-                      : 'rotateY(0deg) translateZ(-200px)',
+                        ? 'rotateY(-90deg) translateZ(-100px)'
+                        : isNext
+                          ? 'rotateY(90deg) translateZ(-100px)'
+                          : 'rotateY(0deg) translateZ(-200px)',
                     opacity: isActive ? 1 : 0,
                     transformStyle: 'preserve-3d',
                     backfaceVisibility: 'hidden',
                     transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
                   }}
                 >
+                  {/* Blurred Stretched Background */}
+                  <img
+                    src={image.src}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-fill blur-2xl scale-110 opacity-50"
+                  />
+                  {/* Foreground Fitted Image */}
                   <img
                     src={image.src}
                     alt={image.alt}
-                    className="w-full h-full object-cover"
+                    className="absolute z-10 top-0 left-1/2 -translate-x-1/2 h-full w-auto max-w-none"
                   />
                   {/* Subtle gradient overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#1a1f2e]/30 to-transparent" />
+                  <div className="absolute inset-0 z-20 bg-gradient-to-t from-[#1a1f2e]/30 to-transparent" />
                 </div>
               );
             })}
@@ -122,22 +117,22 @@ export function HeroCarousel() {
           <button
             onClick={prevSlide}
             disabled={isTransitioning}
-            className="absolute left-4 top-1/2 -translate-y-1/2 z-30 w-12 h-12 flex items-center justify-center rounded-full bg-white/10 backdrop-blur-sm text-white transition-all duration-300 hover:bg-white/20 hover:scale-110 hover:shadow-[0_0_30px_rgba(74,158,255,0.3)] disabled:opacity-50"
+            className="absolute left-1 top-1/2 -translate-y-1/2 z-30 w-12 h-12 flex items-center justify-center rounded-full backdrop-blur-sm text-white transition-all duration-300 hover:bg-white/20 hover:scale-110 hover:shadow-[0_0_30px_rgba(74,158,255,0.3)] disabled:opacity-50"
             style={{
               animation: 'pulse 3s ease-in-out infinite',
             }}
           >
-            <ChevronLeft size={28} />
+            <ChevronLeft size={48} />
           </button>
           <button
             onClick={nextSlide}
             disabled={isTransitioning}
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-30 w-12 h-12 flex items-center justify-center rounded-full bg-white/10 backdrop-blur-sm text-white transition-all duration-300 hover:bg-white/20 hover:scale-110 hover:shadow-[0_0_30px_rgba(74,158,255,0.3)] disabled:opacity-50"
+            className="absolute right-1 top-1/2 -translate-y-1/2 z-30 w-12 h-12 flex items-center justify-center rounded-full backdrop-blur-sm text-white transition-all duration-300 hover:bg-white/20 hover:scale-110 hover:shadow-[0_0_30px_rgba(74,158,255,0.3)] disabled:opacity-50"
             style={{
               animation: 'pulse 3s ease-in-out infinite',
             }}
           >
-            <ChevronRight size={28} />
+            <ChevronRight size={48} />
           </button>
 
           {/* Dot Indicators */}
@@ -147,17 +142,18 @@ export function HeroCarousel() {
                 key={index}
                 onClick={() => goToSlide(index)}
                 disabled={isTransitioning}
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  index === currentSlide
-                    ? 'w-6 bg-[#4a9eff]'
-                    : 'w-2 bg-white/50 hover:bg-white/80 hover:scale-125'
-                }`}
+                className={`h-2 rounded-full transition-all duration-300 ${index === currentSlide
+                  ? 'w-6 bg-[#4a9eff]'
+                  : 'w-2 bg-white/50 hover:bg-white/80 hover:scale-125'
+                  }`}
                 style={{
                   transitionTimingFunction: 'cubic-bezier(0.68, -0.55, 0.265, 1.55)',
                 }}
               />
             ))}
           </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -169,7 +165,7 @@ export function HeroCarousel() {
           }
           50% {
             opacity: 1;
-            transform: translateY(-50%) scale(1.05);
+            transform: translateY(-50%) scale(1.2);
           }
         }
       `}</style>
