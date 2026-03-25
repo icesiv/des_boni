@@ -8,41 +8,41 @@ import formidable from "formidable"
 function heroImagesApiPlugin() {
   return {
     name: 'hero-images-api',
-    configureServer(server: any) {
-      server.middlewares.use('/api/hero-images', async (req: any, res: any, next: any) => {
-        const targetDir = path.resolve(__dirname, './public/assets/hero');
-        if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
+    configureServer(server: any) { server.middlewares.use('/api/hero-images', this.handler); },
+    configurePreviewServer(server: any) { server.middlewares.use('/api/hero-images', this.handler); },
+    async handler(req: any, res: any, next: any) {
+      const targetDir = path.resolve(__dirname, './public/assets/hero');
+      if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
 
-        if (req.method === 'GET') {
-          const files = fs.readdirSync(targetDir);
-          const images = files.filter(f => /\.(png|jpe?g|gif|webp)$/i.test(f)).sort().map(f => `/assets/hero/${f}`);
+      if (req.method === 'GET') {
+        const files = fs.readdirSync(targetDir);
+        const images = files.filter(f => /\.(png|jpe?g|gif|webp)$/i.test(f)).sort().map(f => `/assets/hero/${f}`);
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify(images));
+        return;
+      }
+
+      if (req.method === 'POST') {
+        const form = formidable({ uploadDir: targetDir, keepExtensions: true, maxFileSize: 10 * 1024 * 1024, filename: (_n, _e, part) => `${Date.now()}_${part.originalFilename}` });
+        form.parse(req, (err) => {
           res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify(images));
+          res.end(err ? JSON.stringify({ error: err.message }) : JSON.stringify({ success: true }));
+        });
+        return;
+      }
+
+      if (req.method === 'DELETE') {
+        const qs = new URL(req.url, `http://${req.headers.host}`);
+        const filename = qs.searchParams.get('file');
+        if (filename) {
+          const fp = path.join(targetDir, path.basename(filename));
+          if (fs.existsSync(fp)) fs.unlinkSync(fp);
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ success: true }));
           return;
         }
-
-        if (req.method === 'POST') {
-          const form = formidable({ uploadDir: targetDir, keepExtensions: true, maxFileSize: 10 * 1024 * 1024, filename: (_n, _e, part) => `${Date.now()}_${part.originalFilename}` });
-          form.parse(req, (err) => {
-            res.setHeader('Content-Type', 'application/json');
-            res.end(err ? JSON.stringify({ error: err.message }) : JSON.stringify({ success: true }));
-          });
-          return;
-        }
-
-        if (req.method === 'DELETE') {
-          const qs = new URL(req.url, `http://${req.headers.host}`);
-          const filename = qs.searchParams.get('file');
-          if (filename) {
-            const fp = path.join(targetDir, path.basename(filename));
-            if (fs.existsSync(fp)) fs.unlinkSync(fp);
-            res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ success: true }));
-            return;
-          }
-        }
-        next();
-      });
+      }
+      next();
     }
   }
 }
@@ -65,80 +65,80 @@ function galleryImagesApiPlugin() {
 
   return {
     name: 'gallery-images-api',
-    configureServer(server: any) {
-      server.middlewares.use('/api/gallery-images', async (req: any, res: any, next: any) => {
-        if (!fs.existsSync(IMG_DIR)) fs.mkdirSync(IMG_DIR, { recursive: true });
+    configureServer(server: any) { server.middlewares.use('/api/gallery-images', this.handler); },
+    configurePreviewServer(server: any) { server.middlewares.use('/api/gallery-images', this.handler); },
+    async handler(req: any, res: any, next: any) {
+      if (!fs.existsSync(IMG_DIR)) fs.mkdirSync(IMG_DIR, { recursive: true });
 
-        const json = (data: any, status = 200) => {
-          res.statusCode = status;
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify(data));
-        };
+      const json = (data: any, status = 200) => {
+        res.statusCode = status;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify(data));
+      };
 
-        // GET → list all with metadata
-        if (req.method === 'GET') {
+      // GET → list all with metadata
+      if (req.method === 'GET') {
+        const meta = readMeta();
+        // Enrich with full src path
+        const result = meta.map((m: any) => ({ ...m, src: `/assets/gallery/${m.filename}` }));
+        return json(result);
+      }
+
+      // POST /api/gallery-images → upload new image (multipart)
+      //      Body may also contain fields: alt, categories (comma-separated)
+      if (req.method === 'POST') {
+        const form = formidable({
+          uploadDir: IMG_DIR, keepExtensions: true, maxFileSize: 10 * 1024 * 1024,
+          filename: (_n, _e, part) => `${Date.now()}_${part.originalFilename}`
+        });
+        form.parse(req, (err: any, fields: any, files: any) => {
+          if (err) return json({ error: err.message }, 500);
+          const uploaded = Array.isArray(files.image) ? files.image[0] : files.image;
+          if (!uploaded) return json({ error: 'No file received' }, 400);
+          const filename = path.basename(uploaded.filepath || uploaded.newFilename || uploaded.path);
+          const alt = (Array.isArray(fields.alt) ? fields.alt[0] : fields.alt) || filename;
+          const cats = (Array.isArray(fields.categories) ? fields.categories[0] : fields.categories) || '';
+          const categories = cats ? cats.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
           const meta = readMeta();
-          // Enrich with full src path
-          const result = meta.map((m: any) => ({ ...m, src: `/assets/gallery/${m.filename}` }));
-          return json(result);
-        }
+          meta.push({ filename, alt, categories });
+          writeMeta(meta);
+          json({ success: true, filename, alt, categories });
+        });
+        return;
+      }
 
-        // POST /api/gallery-images → upload new image (multipart)
-        //      Body may also contain fields: alt, categories (comma-separated)
-        if (req.method === 'POST') {
-          const form = formidable({
-            uploadDir: IMG_DIR, keepExtensions: true, maxFileSize: 10 * 1024 * 1024,
-            filename: (_n, _e, part) => `${Date.now()}_${part.originalFilename}`
-          });
-          form.parse(req, (err: any, fields: any, files: any) => {
-            if (err) return json({ error: err.message }, 500);
-            const uploaded = Array.isArray(files.image) ? files.image[0] : files.image;
-            if (!uploaded) return json({ error: 'No file received' }, 400);
-            const filename = path.basename(uploaded.filepath || uploaded.newFilename || uploaded.path);
-            const alt = (Array.isArray(fields.alt) ? fields.alt[0] : fields.alt) || filename;
-            const cats = (Array.isArray(fields.categories) ? fields.categories[0] : fields.categories) || '';
-            const categories = cats ? cats.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
+      // PATCH /api/gallery-images → update alt/categories for existing image
+      if (req.method === 'PATCH') {
+        let body = '';
+        req.on('data', (c: Buffer) => { body += c; });
+        req.on('end', () => {
+          try {
+            const { filename, alt, categories } = JSON.parse(body);
             const meta = readMeta();
-            meta.push({ filename, alt, categories });
+            const idx = meta.findIndex((m: any) => m.filename === filename);
+            if (idx === -1) return json({ error: 'Not found' }, 404);
+            meta[idx] = { ...meta[idx], alt: alt ?? meta[idx].alt, categories: categories ?? meta[idx].categories };
             writeMeta(meta);
-            json({ success: true, filename, alt, categories });
-          });
-          return;
-        }
+            json({ success: true });
+          } catch { json({ error: 'Invalid JSON' }, 400); }
+        });
+        return;
+      }
 
-        // PATCH /api/gallery-images → update alt/categories for existing image
-        if (req.method === 'PATCH') {
-          let body = '';
-          req.on('data', (c: Buffer) => { body += c; });
-          req.on('end', () => {
-            try {
-              const { filename, alt, categories } = JSON.parse(body);
-              const meta = readMeta();
-              const idx = meta.findIndex((m: any) => m.filename === filename);
-              if (idx === -1) return json({ error: 'Not found' }, 404);
-              meta[idx] = { ...meta[idx], alt: alt ?? meta[idx].alt, categories: categories ?? meta[idx].categories };
-              writeMeta(meta);
-              json({ success: true });
-            } catch { json({ error: 'Invalid JSON' }, 400); }
-          });
-          return;
+      // DELETE /api/gallery-images?file=filename
+      if (req.method === 'DELETE') {
+        const qs = new URL(req.url, `http://${req.headers.host}`);
+        const filename = qs.searchParams.get('file');
+        if (filename) {
+          const fp = path.join(IMG_DIR, path.basename(filename));
+          if (fs.existsSync(fp)) fs.unlinkSync(fp);
+          const meta = readMeta().filter((m: any) => m.filename !== filename);
+          writeMeta(meta);
+          return json({ success: true });
         }
+      }
 
-        // DELETE /api/gallery-images?file=filename
-        if (req.method === 'DELETE') {
-          const qs = new URL(req.url, `http://${req.headers.host}`);
-          const filename = qs.searchParams.get('file');
-          if (filename) {
-            const fp = path.join(IMG_DIR, path.basename(filename));
-            if (fs.existsSync(fp)) fs.unlinkSync(fp);
-            const meta = readMeta().filter((m: any) => m.filename !== filename);
-            writeMeta(meta);
-            return json({ success: true });
-          }
-        }
-
-        next();
-      });
+      next();
     }
   }
 }
@@ -161,74 +161,74 @@ function teamMembersApiPlugin() {
 
   return {
     name: 'team-members-api',
-    configureServer(server: any) {
-      server.middlewares.use('/api/team-members', async (req: any, res: any, next: any) => {
-        if (!fs.existsSync(IMG_DIR)) fs.mkdirSync(IMG_DIR, { recursive: true });
+    configureServer(server: any) { server.middlewares.use('/api/team-members', this.handler); },
+    configurePreviewServer(server: any) { server.middlewares.use('/api/team-members', this.handler); },
+    async handler(req: any, res: any, next: any) {
+      if (!fs.existsSync(IMG_DIR)) fs.mkdirSync(IMG_DIR, { recursive: true });
 
-        const json = (data: any, status = 200) => {
-          res.statusCode = status;
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify(data));
-        };
+      const json = (data: any, status = 200) => {
+        res.statusCode = status;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify(data));
+      };
 
-        if (req.method === 'GET') {
+      if (req.method === 'GET') {
+        const meta = readMeta();
+        return json(meta.map((m: any) => ({ ...m, src: `/assets/team/${m.filename}` })));
+      }
+
+      if (req.method === 'POST') {
+        const form = formidable({
+          uploadDir: IMG_DIR, keepExtensions: true, maxFileSize: 10 * 1024 * 1024,
+          filename: (_n, _e, part) => `${Date.now()}_${part.originalFilename}`
+        });
+        form.parse(req, (err: any, fields: any, files: any) => {
+          if (err) return json({ error: err.message }, 500);
+          const uploaded = Array.isArray(files.image) ? files.image[0] : files.image;
+          if (!uploaded) return json({ error: 'No file received' }, 400);
+          const filename = path.basename(uploaded.filepath || uploaded.newFilename || uploaded.path);
+          const name = (Array.isArray(fields.name) ? fields.name[0] : fields.name) || filename;
+          const role = (Array.isArray(fields.role) ? fields.role[0] : fields.role) || '';
+          const order = parseInt((Array.isArray(fields.order) ? fields.order[0] : fields.order) || '0');
           const meta = readMeta();
-          return json(meta.map((m: any) => ({ ...m, src: `/assets/team/${m.filename}` })));
-        }
+          meta.push({ filename, name, role, order });
+          meta.sort((a: any, b: any) => a.order - b.order);
+          writeMeta(meta);
+          json({ success: true, filename, name, role, order });
+        });
+        return;
+      }
 
-        if (req.method === 'POST') {
-          const form = formidable({
-            uploadDir: IMG_DIR, keepExtensions: true, maxFileSize: 10 * 1024 * 1024,
-            filename: (_n, _e, part) => `${Date.now()}_${part.originalFilename}`
-          });
-          form.parse(req, (err: any, fields: any, files: any) => {
-            if (err) return json({ error: err.message }, 500);
-            const uploaded = Array.isArray(files.image) ? files.image[0] : files.image;
-            if (!uploaded) return json({ error: 'No file received' }, 400);
-            const filename = path.basename(uploaded.filepath || uploaded.newFilename || uploaded.path);
-            const name = (Array.isArray(fields.name) ? fields.name[0] : fields.name) || filename;
-            const role = (Array.isArray(fields.role) ? fields.role[0] : fields.role) || '';
-            const order = parseInt((Array.isArray(fields.order) ? fields.order[0] : fields.order) || '0');
+      if (req.method === 'PATCH') {
+        let body = '';
+        req.on('data', (c: Buffer) => { body += c; });
+        req.on('end', () => {
+          try {
+            const { filename, name, role, order } = JSON.parse(body);
             const meta = readMeta();
-            meta.push({ filename, name, role, order });
+            const idx = meta.findIndex((m: any) => m.filename === filename);
+            if (idx === -1) return json({ error: 'Not found' }, 404);
+            meta[idx] = { ...meta[idx], name: name ?? meta[idx].name, role: role ?? meta[idx].role, order: order ?? meta[idx].order };
             meta.sort((a: any, b: any) => a.order - b.order);
             writeMeta(meta);
-            json({ success: true, filename, name, role, order });
-          });
-          return;
-        }
+            json({ success: true });
+          } catch { json({ error: 'Invalid JSON' }, 400); }
+        });
+        return;
+      }
 
-        if (req.method === 'PATCH') {
-          let body = '';
-          req.on('data', (c: Buffer) => { body += c; });
-          req.on('end', () => {
-            try {
-              const { filename, name, role, order } = JSON.parse(body);
-              const meta = readMeta();
-              const idx = meta.findIndex((m: any) => m.filename === filename);
-              if (idx === -1) return json({ error: 'Not found' }, 404);
-              meta[idx] = { ...meta[idx], name: name ?? meta[idx].name, role: role ?? meta[idx].role, order: order ?? meta[idx].order };
-              meta.sort((a: any, b: any) => a.order - b.order);
-              writeMeta(meta);
-              json({ success: true });
-            } catch { json({ error: 'Invalid JSON' }, 400); }
-          });
-          return;
+      if (req.method === 'DELETE') {
+        const qs = new URL(req.url, `http://${req.headers.host}`);
+        const filename = qs.searchParams.get('file');
+        if (filename) {
+          const fp = path.join(IMG_DIR, path.basename(filename));
+          if (fs.existsSync(fp)) fs.unlinkSync(fp);
+          writeMeta(readMeta().filter((m: any) => m.filename !== filename));
+          return json({ success: true });
         }
+      }
 
-        if (req.method === 'DELETE') {
-          const qs = new URL(req.url, `http://${req.headers.host}`);
-          const filename = qs.searchParams.get('file');
-          if (filename) {
-            const fp = path.join(IMG_DIR, path.basename(filename));
-            if (fs.existsSync(fp)) fs.unlinkSync(fp);
-            writeMeta(readMeta().filter((m: any) => m.filename !== filename));
-            return json({ success: true });
-          }
-        }
-
-        next();
-      });
+      next();
     }
   }
 }
@@ -275,109 +275,105 @@ function shopItemsApiPlugin() {
   return {
     name: 'shop-items-api',
     configureServer(server: any) {
-
-      // Scrape ArtStation (or any URL) for og meta
-      server.middlewares.use('/api/scrape-artstation', async (req: any, res: any, next: any) => {
-        if (req.method !== 'POST') return next();
-        if (!fs.existsSync(IMG_DIR)) fs.mkdirSync(IMG_DIR, { recursive: true });
-        const json = (data: any, status = 200) => { res.statusCode = status; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(data)); };
-
-        let body = '';
-        req.on('data', (c: Buffer) => { body += c; });
-        req.on('end', async () => {
-          try {
-            const { url } = JSON.parse(body);
-            if (!url) return json({ error: 'No URL provided' }, 400);
-
-            const resp = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 AppleWebKit/537.36 Chrome/120', Accept: 'text/html' } });
-            const html = await resp.text();
-
-            const name = extractMeta(html, 'og:title') || extractMeta(html, 'twitter:title');
-            const imageUrl = extractMeta(html, 'og:image') || extractMeta(html, 'twitter:image');
-            const description = extractMeta(html, 'og:description') || extractMeta(html, 'twitter:description');
-            const priceMeta = extractMeta(html, 'product:price:amount');
-            const priceMatch = html.match(/"price"\s*:\s*"?(\d+(?:\.\d+)?)"?/) || [];
-            const price = priceMeta ? `$${priceMeta}` : (priceMatch[1] ? `$${parseFloat(priceMatch[1]).toFixed(2)}` : '');
-
-            let filename = '';
-            if (imageUrl) {
-              try { filename = await downloadImage(imageUrl); } catch (e) { console.error('Image download failed:', e); }
-            }
-            json({ name, description, imageUrl, filename, price, url });
-          } catch (e: any) { json({ error: e.message }, 500); }
-        });
+      server.middlewares.use('/api/scrape-artstation', this.scrapeHandler);
+      server.middlewares.use('/api/shop-items', this.crudHandler);
+    },
+    configurePreviewServer(server: any) {
+      server.middlewares.use('/api/scrape-artstation', this.scrapeHandler);
+      server.middlewares.use('/api/shop-items', this.crudHandler);
+    },
+    async scrapeHandler(req: any, res: any, next: any) {
+      if (req.method !== 'POST') return next();
+      if (!fs.existsSync(IMG_DIR)) fs.mkdirSync(IMG_DIR, { recursive: true });
+      const json = (data: any, status = 200) => { res.statusCode = status; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(data)); };
+      let body = '';
+      req.on('data', (c: Buffer) => { body += c; });
+      req.on('end', async () => {
+        try {
+          const { url } = JSON.parse(body);
+          if (!url) return json({ error: 'No URL provided' }, 400);
+          const resp = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 AppleWebKit/537.36 Chrome/120', Accept: 'text/html' } });
+          const html = await resp.text();
+          const name = extractMeta(html, 'og:title') || extractMeta(html, 'twitter:title');
+          const imageUrl = extractMeta(html, 'og:image') || extractMeta(html, 'twitter:image');
+          const description = extractMeta(html, 'og:description') || extractMeta(html, 'twitter:description');
+          const priceMeta = extractMeta(html, 'product:price:amount');
+          const priceMatch = html.match(/"price"\s*:\s*"?(\d+(?:\.\d+)?)"?/) || [];
+          const price = priceMeta ? `$${priceMeta}` : (priceMatch[1] ? `$${parseFloat(priceMatch[1]).toFixed(2)}` : '');
+          let filename = '';
+          if (imageUrl) { try { filename = await downloadImage(imageUrl); } catch (e) { console.error('Image download failed:', e); } }
+          json({ name, description, imageUrl, filename, price, url });
+        } catch (e: any) { json({ error: e.message }, 500); }
       });
+    },
+    async crudHandler(req: any, res: any, next: any) {
+      if (!fs.existsSync(IMG_DIR)) fs.mkdirSync(IMG_DIR, { recursive: true });
+      const json = (data: any, status = 200) => { res.statusCode = status; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(data)); };
 
-      // Shop items CRUD
-      server.middlewares.use('/api/shop-items', async (req: any, res: any, next: any) => {
-        if (!fs.existsSync(IMG_DIR)) fs.mkdirSync(IMG_DIR, { recursive: true });
-        const json = (data: any, status = 200) => { res.statusCode = status; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(data)); };
+      if (req.method === 'GET') {
+        return json(readMeta().map((m: any) => ({ ...m, src: `/assets/shop/${m.filename}` })));
+      }
 
-        if (req.method === 'GET') {
-          return json(readMeta().map((m: any) => ({ ...m, src: `/assets/shop/${m.filename}` })));
-        }
-
-        if (req.method === 'POST') {
-          const ct = req.headers['content-type'] || '';
-          if (ct.includes('multipart')) {
-            const form = formidable({ uploadDir: IMG_DIR, keepExtensions: true, maxFileSize: 10 * 1024 * 1024, filename: (_n, _e, part) => `${Date.now()}_${part.originalFilename}` });
-            form.parse(req, (err: any, fields: any, files: any) => {
-              if (err) return json({ error: err.message }, 500);
-              const uploaded = Array.isArray(files.image) ? files.image[0] : files.image;
-              if (!uploaded) return json({ error: 'No file' }, 400);
-              const filename = path.basename(uploaded.filepath || uploaded.newFilename || uploaded.path);
-              const g = (f: string) => (Array.isArray(fields[f]) ? fields[f][0] : fields[f]) || '';
-              const meta = readMeta();
-              meta.push({ id: Date.now().toString(), filename, name: g('name'), alt: g('alt'), category: g('category'), price: g('price'), link: g('link') });
-              writeMeta(meta);
-              json({ success: true });
-            });
-          } else {
-            let body = '';
-            req.on('data', (c: Buffer) => { body += c; });
-            req.on('end', () => {
-              try {
-                const { filename, name, alt, category, price, link } = JSON.parse(body);
-                const meta = readMeta();
-                meta.push({ id: Date.now().toString(), filename, name, alt, category, price, link });
-                writeMeta(meta);
-                json({ success: true });
-              } catch { json({ error: 'Invalid JSON' }, 400); }
-            });
-          }
-          return;
-        }
-
-        if (req.method === 'PATCH') {
+      if (req.method === 'POST') {
+        const ct = req.headers['content-type'] || '';
+        if (ct.includes('multipart')) {
+          const form = formidable({ uploadDir: IMG_DIR, keepExtensions: true, maxFileSize: 10 * 1024 * 1024, filename: (_n, _e, part) => `${Date.now()}_${part.originalFilename}` });
+          form.parse(req, (err: any, fields: any, files: any) => {
+            if (err) return json({ error: err.message }, 500);
+            const uploaded = Array.isArray(files.image) ? files.image[0] : files.image;
+            if (!uploaded) return json({ error: 'No file' }, 400);
+            const filename = path.basename(uploaded.filepath || uploaded.newFilename || uploaded.path);
+            const g = (f: string) => (Array.isArray(fields[f]) ? fields[f][0] : fields[f]) || '';
+            const meta = readMeta();
+            meta.push({ id: Date.now().toString(), filename, name: g('name'), alt: g('alt'), category: g('category'), price: g('price'), link: g('link') });
+            writeMeta(meta);
+            json({ success: true });
+          });
+        } else {
           let body = '';
           req.on('data', (c: Buffer) => { body += c; });
           req.on('end', () => {
             try {
-              const { id, ...updates } = JSON.parse(body);
+              const { filename, name, alt, category, price, link } = JSON.parse(body);
               const meta = readMeta();
-              const idx = meta.findIndex((m: any) => m.id === id);
-              if (idx === -1) return json({ error: 'Not found' }, 404);
-              meta[idx] = { ...meta[idx], ...updates };
+              meta.push({ id: Date.now().toString(), filename, name, alt, category, price, link });
               writeMeta(meta);
               json({ success: true });
             } catch { json({ error: 'Invalid JSON' }, 400); }
           });
-          return;
         }
+        return;
+      }
 
-        if (req.method === 'DELETE') {
-          const qs = new URL(req.url, `http://${req.headers.host}`);
-          const id = qs.searchParams.get('id');
-          if (id) {
+      if (req.method === 'PATCH') {
+        let body = '';
+        req.on('data', (c: Buffer) => { body += c; });
+        req.on('end', () => {
+          try {
+            const { id, ...updates } = JSON.parse(body);
             const meta = readMeta();
-            const item = meta.find((m: any) => m.id === id);
-            if (item) { const fp = path.join(IMG_DIR, item.filename); if (fs.existsSync(fp)) fs.unlinkSync(fp); }
-            writeMeta(meta.filter((m: any) => m.id !== id));
-            return json({ success: true });
-          }
+            const idx = meta.findIndex((m: any) => m.id === id);
+            if (idx === -1) return json({ error: 'Not found' }, 404);
+            meta[idx] = { ...meta[idx], ...updates };
+            writeMeta(meta);
+            json({ success: true });
+          } catch { json({ error: 'Invalid JSON' }, 400); }
+        });
+        return;
+      }
+
+      if (req.method === 'DELETE') {
+        const qs = new URL(req.url, `http://${req.headers.host}`);
+        const id = qs.searchParams.get('id');
+        if (id) {
+          const meta = readMeta();
+          const item = meta.find((m: any) => m.id === id);
+          if (item) { const fp = path.join(IMG_DIR, item.filename); if (fs.existsSync(fp)) fs.unlinkSync(fp); }
+          writeMeta(meta.filter((m: any) => m.id !== id));
+          return json({ success: true });
         }
-        next();
-      });
+      }
+      next();
     }
   }
 }
@@ -406,50 +402,50 @@ function adminAuthPlugin() {
 
   return {
     name: 'admin-auth-api',
-    configureServer(server: any) {
-      server.middlewares.use('/api/admin-auth', (req: any, res: any, next: any) => {
-        const json = (data: any, status = 200) => {
-          res.statusCode = status;
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify(data));
-        };
+    configureServer(server: any) { server.middlewares.use('/api/admin-auth', this.handler); },
+    configurePreviewServer(server: any) { server.middlewares.use('/api/admin-auth', this.handler); },
+    handler(req: any, res: any, next: any) {
+      const json = (data: any, status = 200) => {
+        res.statusCode = status;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify(data));
+      };
 
-        let body = '';
-        req.on('data', (c: Buffer) => { body += c; });
-        req.on('end', () => {
-          try {
-            const payload = JSON.parse(body || '{}');
-            const config = readConfig();
+      let body = '';
+      req.on('data', (c: Buffer) => { body += c; });
+      req.on('end', () => {
+        try {
+          const payload = JSON.parse(body || '{}');
+          const config = readConfig();
 
-            // POST: login
-            if (req.method === 'POST') {
-              if (payload.password === config.password) {
-                const token = makeToken();
-                SESSION_TOKENS.add(token);
-                return json({ token });
-              }
-              return json({ error: 'Incorrect password' }, 401);
+          // POST: login
+          if (req.method === 'POST') {
+            if (payload.password === config.password) {
+              const token = makeToken();
+              SESSION_TOKENS.add(token);
+              return json({ token });
             }
+            return json({ error: 'Incorrect password' }, 401);
+          }
 
-            // PUT: change password
-            if (req.method === 'PUT') {
-              const { token, currentPassword, newPassword } = payload;
-              if (!SESSION_TOKENS.has(token)) return json({ error: 'Not authenticated' }, 401);
-              if (currentPassword !== config.password) return json({ error: 'Current password is wrong' }, 403);
-              if (!newPassword || newPassword.length < 4) return json({ error: 'New password must be at least 4 characters' }, 400);
-              writeConfig({ ...config, password: newPassword });
-              return json({ success: true });
-            }
+          // PUT: change password
+          if (req.method === 'PUT') {
+            const { token, currentPassword, newPassword } = payload;
+            if (!SESSION_TOKENS.has(token)) return json({ error: 'Not authenticated' }, 401);
+            if (currentPassword !== config.password) return json({ error: 'Current password is wrong' }, 403);
+            if (!newPassword || newPassword.length < 4) return json({ error: 'New password must be at least 4 characters' }, 400);
+            writeConfig({ ...config, password: newPassword });
+            return json({ success: true });
+          }
 
-            // DELETE: logout (invalidate token)
-            if (req.method === 'DELETE') {
-              SESSION_TOKENS.delete(payload.token);
-              return json({ success: true });
-            }
+          // DELETE: logout (invalidate token)
+          if (req.method === 'DELETE') {
+            SESSION_TOKENS.delete(payload.token);
+            return json({ success: true });
+          }
 
-            next();
-          } catch { json({ error: 'Invalid JSON' }, 400); }
-        });
+          next();
+        } catch { json({ error: 'Invalid JSON' }, 400); }
       });
     }
   }
