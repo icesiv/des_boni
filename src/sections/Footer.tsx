@@ -1,13 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { Instagram, Twitter, Linkedin, Youtube } from 'lucide-react';
-
-const socialLinks = [
-  { icon: Instagram, href: '#', label: 'Instagram' },
-  { icon: Twitter, href: '#', label: 'Twitter' },
-  { icon: Linkedin, href: '#', label: 'LinkedIn' },
-  { icon: Youtube, href: '#', label: 'YouTube' },
-];
-
 
 export function Footer() {
   const [isVisible, setIsVisible] = useState(false);

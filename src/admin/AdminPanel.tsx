@@ -3,7 +3,6 @@ import { Upload, Trash2, Image as ImageIcon, Edit2, Check, X, Link as LinkIcon, 
 import { Link } from 'react-router-dom';
 
 // ── Types ──────────────────────────────────────────────────────────────────
-interface HeroImage { url: string; }
 interface GalleryImage { filename: string; src: string; alt: string; categories: string[]; }
 interface TeamMember { filename: string; src: string; name: string; role: string; order: number; }
 interface ShopItem { id: string; filename: string; src: string; name: string; alt: string; category: string; price: string; link?: string; }
@@ -481,10 +480,10 @@ export function AdminPanel() {
   useEffect(() => { document.title = 'Admin Panel | DCS'; }, []);
   useEffect(() => { fetchHero(); fetchGallery(); fetchTeam(); fetchShop(); }, []);
 
-  const fetchHero = () => fetch('/api/hero-images').then(r => r.json()).then(d => Array.isArray(d) && setHeroImages(d));
-  const fetchGallery = () => fetch('/api/gallery-images').then(r => r.json()).then(d => Array.isArray(d) && setGalleryImages(d));
-  const fetchTeam = () => fetch('/api/team-members').then(r => r.json()).then(d => Array.isArray(d) && setTeamMembers(d));
-  const fetchShop = () => fetch('/api/shop-items').then(r => r.json()).then(d => Array.isArray(d) && setShopItems(d));
+  const fetchHero = () => { fetch('/api/hero-images').then(r => r.json()).then(d => { if (Array.isArray(d)) setHeroImages(d); }); };
+  const fetchGallery = () => fetch('/api/gallery-images').then(r => r.json()).then(d => { if (Array.isArray(d)) setGalleryImages(d); });
+  const fetchTeam = () => fetch('/api/team-members').then(r => r.json()).then(d => { if (Array.isArray(d)) setTeamMembers(d); });
+  const fetchShop = () => fetch('/api/shop-items').then(r => r.json()).then(d => { if (Array.isArray(d)) setShopItems(d); });
 
   const handleHeroUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;

@@ -4,6 +4,11 @@ import { defineConfig } from "vite"
 import fs from "fs"
 import formidable from "formidable"
 
+const getFormField = (fields: formidable.Fields, name: string) => {
+  const field = fields[name];
+  return (Array.isArray(field) ? field[0] : (field as unknown as string)) || '';
+};
+
 // ── Hero Images API ────────────────────────────────────────────────────────
 function heroImagesApiPlugin() {
   return {
@@ -95,8 +100,8 @@ function galleryImagesApiPlugin() {
             const uploaded = Array.isArray(files.image) ? files.image[0] : (files.image as any);
             if (!uploaded) return json({ error: 'No file received' }, 400);
             const filename = path.basename(uploaded.filepath || uploaded.newFilename || uploaded.path);
-            const alt = Array.isArray(fields.alt) ? fields.alt[0] : (fields.alt as string) || filename;
-            const cats = Array.isArray(fields.categories) ? fields.categories[0] : (fields.categories as string) || '';
+            const alt = getFormField(fields, 'alt') || filename;
+            const cats = getFormField(fields, 'categories');
             const categories = cats ? cats.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
             const meta = readMeta();
             meta.push({ filename, alt, categories });
@@ -186,9 +191,9 @@ function teamMembersApiPlugin() {
             const uploaded = Array.isArray(files.image) ? files.image[0] : (files.image as any);
             if (!uploaded) return json({ error: 'No file received' }, 400);
             const filename = path.basename(uploaded.filepath || uploaded.newFilename || uploaded.path);
-            const name = (Array.isArray(fields.name) ? fields.name[0] : fields.name as string) || filename;
-            const role = (Array.isArray(fields.role) ? fields.role[0] : fields.role as string) || '';
-            const order = parseInt((Array.isArray(fields.order) ? fields.order[0] : fields.order as string) || '0');
+            const name = getFormField(fields, 'name') || filename;
+            const role = getFormField(fields, 'role');
+            const order = parseInt(getFormField(fields, 'order') || '0');
             const meta = readMeta();
             meta.push({ filename, name, role, order });
             meta.sort((a: any, b: any) => a.order - b.order);
@@ -326,9 +331,16 @@ function shopItemsApiPlugin() {
               const uploaded = Array.isArray(files.image) ? files.image[0] : files.image;
               if (!uploaded) return json({ error: 'No file' }, 400);
               const filename = path.basename(uploaded.filepath || uploaded.newFilename || uploaded.path);
-              const g = (f: string) => (Array.isArray(fields[f]) ? fields[f][0] : fields[f]) || '';
               const meta = readMeta();
-              meta.push({ id: Date.now().toString(), filename, name: g('name'), alt: g('alt'), category: g('category'), price: g('price'), link: g('link') });
+              meta.push({
+                id: Date.now().toString(),
+                filename,
+                name: getFormField(fields, 'name'),
+                alt: getFormField(fields, 'alt'),
+                category: getFormField(fields, 'category'),
+                price: getFormField(fields, 'price'),
+                link: getFormField(fields, 'link')
+              });
               writeMeta(meta);
               json({ success: true });
             });
