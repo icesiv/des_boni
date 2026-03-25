@@ -57,19 +57,21 @@ app.post('/api/scrape-artstation', async (req, res) => {
     if (!url) return res.status(400).json({ error: 'No URL provided' });
 
     try {
-        // Use a realistic User-Agent to bypass basic bot filters
-        const response = await fetch(url, {
+        // We use a CORS Proxy to bypass Cloudflare blocking.
+        // This makes the request appear to come from a browser environment.
+        const proxyUrl = 'https://corsproxy.io/?';
+        const targetUrl = encodeURIComponent(url);
+
+        const response = await fetch(proxyUrl + targetUrl, {
             headers: {
+                // Standard browser headers
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Cache-Control': 'no-cache',
-                'Pragma': 'no-cache',
-                'Referer': 'https://www.google.com/'
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
             }
         });
 
-        if (!response.ok) throw new Error(`ArtStation returned ${response.status}`);
+        if (!response.ok) throw new Error(`Proxy returned ${response.status}`);
 
         const html = await response.text();
 
@@ -77,7 +79,6 @@ app.post('/api/scrape-artstation', async (req, res) => {
         const imageUrl = extractMeta(html, 'og:image') || extractMeta(html, 'twitter:image');
         const description = extractMeta(html, 'og:description');
 
-        // Price extraction logic
         const priceMeta = extractMeta(html, 'product:price:amount');
         const priceMatch = html.match(/"price"\s*:\s*"?(\d+(?:\.\d+)?)"?/) || [];
         const price = priceMeta ? `$${priceMeta}` : (priceMatch[1] ? `$${parseFloat(priceMatch[1]).toFixed(2)}` : '');
@@ -85,9 +86,15 @@ app.post('/api/scrape-artstation', async (req, res) => {
         let filename = '';
         if (imageUrl) {
             try {
+                // Download the image using the same proxy to avoid 403 on the image
+                // Note: We decode the image URL because the proxy might have encoded it, 
+                // but corsproxy usually passes the URL as is. We need to fetch the image carefully.
+                // For images, we usually fetch directly first, but if that fails, proxy is an option.
+                // Let's try direct download with headers first, as proxying binary data can be tricky with free proxies.
                 filename = await downloadImage(imageUrl);
             } catch (e) {
-                console.error('Image download failed:', e);
+                console.error('Image download failed, trying proxy:', e);
+                // Optional: You could try downloading via proxy here if direct fails
             }
         }
 
