@@ -154,8 +154,8 @@ export function Gallery() {
     <section ref={sectionRef} id="gallery">
       {lightboxIndex !== null && (
         <Lightbox
-          images={filtered}
-          index={filtered.indexOf(visibleImages[lightboxIndex])}
+          images={visibleImages}
+          index={lightboxIndex}
           onClose={() => setLightboxIndex(null)}
         />
       )}

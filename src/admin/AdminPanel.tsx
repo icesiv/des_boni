@@ -3,6 +3,7 @@ import { Upload, Trash2, Image as ImageIcon, Edit2, Check, X, Link as LinkIcon, 
 import { Link } from 'react-router-dom';
 
 // ── Types ──────────────────────────────────────────────────────────────────
+interface HeroImage { url: string; }
 interface GalleryImage { filename: string; src: string; alt: string; categories: string[]; }
 interface TeamMember { filename: string; src: string; name: string; role: string; order: number; }
 interface ShopItem { id: string; filename: string; src: string; name: string; alt: string; category: string; price: string; link?: string; }
@@ -457,8 +458,8 @@ function ArtStationImportModal({ onClose, onDone }: { onClose: () => void; onDon
 }
 
 // ── Admin Panel ────────────────────────────────────────────────────────────
-export function AdminPanel({ authToken, onLogout }: { authToken: string; onLogout: () => void }) {
-  const [activeTab, setActiveTab] = useState<'hero' | 'gallery' | 'team' | 'shop' | 'settings'>('hero');
+export function AdminPanel() {
+  const [activeTab, setActiveTab] = useState<'hero' | 'gallery' | 'team' | 'shop'>('hero');
 
   // Hero state
   const [heroImages, setHeroImages] = useState<string[]>([]);
@@ -480,26 +481,10 @@ export function AdminPanel({ authToken, onLogout }: { authToken: string; onLogou
   useEffect(() => { document.title = 'Admin Panel | DCS'; }, []);
   useEffect(() => { fetchHero(); fetchGallery(); fetchTeam(); fetchShop(); }, []);
 
-  const fetchHero = async () => {
-    const r = await fetch('/api/hero-images');
-    const d = await r.json();
-    if (Array.isArray(d)) setHeroImages(d);
-  };
-  const fetchGallery = async () => {
-    const r = await fetch('/api/gallery-images');
-    const d = await r.json();
-    if (Array.isArray(d)) setGalleryImages(d);
-  };
-  const fetchTeam = async () => {
-    const r = await fetch('/api/team-members');
-    const d = await r.json();
-    if (Array.isArray(d)) setTeamMembers(d);
-  };
-  const fetchShop = async () => {
-    const r = await fetch('/api/shop-items');
-    const d = await r.json();
-    if (Array.isArray(d)) setShopItems(d);
-  };
+  const fetchHero = () => fetch('/api/hero-images').then(r => r.json()).then(d => Array.isArray(d) && setHeroImages(d));
+  const fetchGallery = () => fetch('/api/gallery-images').then(r => r.json()).then(d => Array.isArray(d) && setGalleryImages(d));
+  const fetchTeam = () => fetch('/api/team-members').then(r => r.json()).then(d => Array.isArray(d) && setTeamMembers(d));
+  const fetchShop = () => fetch('/api/shop-items').then(r => r.json()).then(d => Array.isArray(d) && setShopItems(d));
 
   const handleHeroUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
@@ -558,19 +543,13 @@ export function AdminPanel({ authToken, onLogout }: { authToken: string; onLogou
       {/* Top Bar */}
       <div className="fixed top-0 left-0 right-0 z-40 bg-dark/95 backdrop-blur border-b border-white/10 px-6 py-4 flex items-center justify-between">
         <h1 className="text-xl font-bold font-['Graduate',_sans-serif]">Admin Dashboard</h1>
-        <div className="flex items-center gap-4">
-          <Link to="/" className="text-sm text-[#4a9eff] hover:text-white transition-colors">← Back to Site</Link>
-          <button onClick={async () => {
-            await fetch('/api/admin-auth', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: authToken }) });
-            onLogout();
-          }} className="text-sm text-white/40 hover:text-red-400 transition-colors">Logout</button>
-        </div>
+        <Link to="/" className="text-sm text-[#4a9eff] hover:text-white transition-colors">← Back to Site</Link>
       </div>
 
       <div className="pt-20 max-w-6xl mx-auto px-4 pb-16">
         {/* Tabs */}
         <div className="flex gap-1 mb-8 bg-white/5 rounded-xl p-1.5 w-fit">
-          {([['hero', '🎠 Hero Carousel'], ['gallery', '🖼️ Gallery'], ['team', '👥 Team'], ['shop', '🛒 Shop'], ['settings', '⚙️ Settings']] as const).map(([tab, label]) => (
+          {([['hero', '🎠 Hero Carousel'], ['gallery', '🖼️ Gallery'], ['team', '👥 Team'], ['shop', '🛒 Shop']] as const).map(([tab, label]) => (
             <button key={tab} onClick={() => setActiveTab(tab as any)}
               className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === tab ? 'bg-[#4a9eff] text-white shadow' : 'text-white/50 hover:text-white'}`}>
               {label}
@@ -705,91 +684,6 @@ export function AdminPanel({ authToken, onLogout }: { authToken: string; onLogou
             )}
           </div>
         )}
-
-        {/* Settings Tab */}
-        {activeTab === 'settings' && (
-          <SettingsTab authToken={authToken} onLogout={onLogout} />
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── Settings Tab ─────────────────────────────────────────────────────────
-function SettingsTab({ authToken, onLogout }: { authToken: string; onLogout: () => void }) {
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  const handleChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPassword !== confirm) return setMessage({ type: 'error', text: 'New passwords do not match' });
-    if (newPassword.length < 4) return setMessage({ type: 'error', text: 'Password must be at least 4 characters' });
-    setSaving(true); setMessage(null);
-    try {
-      const res = await fetch('/api/admin-auth', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: authToken, currentPassword, newPassword }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setMessage({ type: 'success', text: 'Password changed! You will be logged out.' });
-        setCurrentPassword(''); setNewPassword(''); setConfirm('');
-        setTimeout(async () => {
-          await fetch('/api/admin-auth', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: authToken }) });
-          onLogout();
-        }, 1800);
-      } else {
-        setMessage({ type: 'error', text: data.error || 'Failed to change password' });
-      }
-    } catch { setMessage({ type: 'error', text: 'Server error' }); }
-    setSaving(false);
-  };
-
-  const handleLogout = async () => {
-    await fetch('/api/admin-auth', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: authToken }) });
-    onLogout();
-  };
-
-  return (
-    <div className="max-w-md">
-      {/* Change password */}
-      <div className="bg-[#1a1f2e] border border-white/10 rounded-xl p-6 shadow-2xl mb-6">
-        <h2 className="text-lg font-semibold mb-1">Change Password</h2>
-        <p className="text-[#a0aec0] text-sm mb-5">Update the admin panel password. You will be logged out after changing it.</p>
-
-        {message && (
-          <div className={`text-sm px-3 py-2 rounded-lg mb-4 ${message.type === 'success' ? 'bg-green-500/10 border border-green-500/30 text-green-400' : 'bg-red-500/10 border border-red-500/20 text-red-400'}`}>
-            {message.text}
-          </div>
-        )}
-
-        <form onSubmit={handleChange} className="space-y-3">
-          {[['Current password', currentPassword, setCurrentPassword], ['New password', newPassword, setNewPassword], ['Confirm new password', confirm, setConfirm]].map(([label, val, set]) => (
-            <div key={label as string}>
-              <label className="text-xs text-white/50 block mb-1">{label as string}</label>
-              <input type="password" value={val as string} onChange={e => (set as any)(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#4a9eff]" />
-            </div>
-          ))}
-          <button type="submit" disabled={saving || !currentPassword || !newPassword || !confirm}
-            className="w-full mt-2 flex items-center justify-center gap-2 bg-[#4a9eff] hover:bg-[#3b82f6] disabled:opacity-50 text-white py-2.5 rounded-lg font-medium transition-all">
-            {saving ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
-            {saving ? 'Saving…' : 'Change Password'}
-          </button>
-        </form>
-      </div>
-
-      {/* Logout */}
-      <div className="bg-[#1a1f2e] border border-white/10 rounded-xl p-6 shadow-2xl">
-        <h2 className="text-lg font-semibold mb-1">Session</h2>
-        <p className="text-[#a0aec0] text-sm mb-4">End your current admin session.</p>
-        <button onClick={handleLogout} className="flex items-center gap-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 hover:text-red-300 px-4 py-2.5 rounded-lg font-medium transition-all">
-          Logout
-        </button>
       </div>
     </div>
   );
