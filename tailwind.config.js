@@ -21,6 +21,8 @@ module.exports = {
           light: "#2a3a34",
         },
         offwhite: "#f4f4f4",
+        lite: "#273141",        // ← edit here to change the "light panel" colour everywhere
+        dark: "#0a1018",        // ← edit here to change the "dark background" colour everywhere
         softblack: "#1a1a1a",
         primary: {
           DEFAULT: "hsl(var(--primary))",

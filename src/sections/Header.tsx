@@ -52,7 +52,7 @@ export function Header() {
           height: isScrolled ? '60px' : '70px',
         }}
       >
-        <div className="max-w-7xl bg-[#0a1018] mx-auto px-4 sm:px-6 lg:px-8 h-full backdrop-blur-xl shadow-lg">
+        <div className="max-w-7xl bg-dark mx-auto px-4 sm:px-6 lg:px-8 h-full backdrop-blur-xl shadow-lg">
           <div className="flex items-center justify-between h-full">
             {/* Logo */}
             <a
@@ -127,8 +127,8 @@ export function Header() {
               key={link.label}
               onClick={() => scrollToSection(link.href)}
               className={`relative text-2xl font-medium transition-all duration-300 px-8 py-3 ${activeSection === link.href
-                  ? 'text-white'
-                  : 'text-white/70 hover:text-white'
+                ? 'text-white'
+                : 'text-white/70 hover:text-white'
                 }`}
               style={{
                 opacity: isMobileMenuOpen ? 1 : 0,
