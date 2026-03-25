@@ -247,9 +247,6 @@ app.delete('/api/gallery-images', (req, res) => {
 // HERO & TEAM APIs (Abbreviated for brevity - copy logic from Gallery if needed)
 // ─────────────────────────────────────────────────────────────────────
 
-// Note: Copy your Hero and Team logic here similar to Gallery above.
-// For brevity in this response, I am adding placeholders, but you should 
-// copy the logic from your vite.config.ts for Hero and Team exactly as Gallery.
 
 // Hero Placeholder
 app.get('/api/hero-images', (req, res) => {
@@ -276,9 +273,101 @@ app.delete('/api/hero-images', (req, res) => {
     }
 });
 
-// Team Placeholder (Copy your full logic from vite.config.ts here)
-// app.get('/api/team-members', ...)
+// ─────────────────────────────────────────────────────────────────────
+// TEAM API (Converted for Express)
+// ─────────────────────────────────────────────────────────────────────
 
+const TEAM_DIR = path.join(__dirname, 'public/assets/team');
+const TEAM_META = path.join(TEAM_DIR, 'team-meta.json');
+
+// Helper to ensure directory exists
+if (!fs.existsSync(TEAM_DIR)) fs.mkdirSync(TEAM_DIR, { recursive: true });
+
+// Helper to read/write meta
+const readTeamMeta = () => {
+    if (!fs.existsSync(TEAM_META)) return [];
+    try { return JSON.parse(fs.readFileSync(TEAM_META, 'utf-8')); } catch { return []; }
+};
+const writeTeamMeta = (data) => {
+    fs.writeFileSync(TEAM_META, JSON.stringify(data, null, 2));
+};
+
+// GET: List all team members
+app.get('/api/team-members', (req, res) => {
+    const meta = readTeamMeta();
+    res.json(meta.map(m => ({ ...m, src: `/assets/team/${m.filename}` })));
+});
+
+// POST: Add new team member (Upload)
+app.post('/api/team-members', (req, res) => {
+    const form = formidable({
+        uploadDir: TEAM_DIR,
+        keepExtensions: true,
+        maxFileSize: 10 * 1024 * 1024,
+        filename: (_n, _e, part) => `${Date.now()}_${part.originalFilename}`
+    });
+
+    form.parse(req, (err, fields, files) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        const uploaded = Array.isArray(files.image) ? files.image[0] : files.image;
+        if (!uploaded) return res.status(400).json({ error: 'No file received' });
+
+        const filename = path.basename(uploaded.filepath || uploaded.newFilename);
+        const name = getFormField(fields, 'name') || filename;
+        const role = getFormField(fields, 'role');
+        const order = parseInt(getFormField(fields, 'order') || '0');
+
+        const meta = readTeamMeta();
+        meta.push({ filename, name, role, order });
+
+        // Sort by order before saving
+        meta.sort((a, b) => a.order - b.order);
+
+        writeTeamMeta(meta);
+        res.json({ success: true, filename, name, role, order });
+    });
+});
+
+// PATCH: Update team member details
+app.patch('/api/team-members', (req, res) => {
+    // In Express, body is parsed automatically by express.json()
+    const { filename, name, role, order } = req.body;
+
+    const meta = readTeamMeta();
+    const idx = meta.findIndex(m => m.filename === filename);
+
+    if (idx === -1) return res.status(404).json({ error: 'Not found' });
+
+    meta[idx] = {
+        ...meta[idx],
+        name: name ?? meta[idx].name,
+        role: role ?? meta[idx].role,
+        order: order ?? meta[idx].order
+    };
+
+    // Sort again if order changed
+    meta.sort((a, b) => a.order - b.order);
+
+    writeTeamMeta(meta);
+    res.json({ success: true });
+});
+
+// DELETE: Remove team member
+app.delete('/api/team-members', (req, res) => {
+    // In Express, query params are in req.query
+    const filename = req.query.file;
+
+    if (filename) {
+        const fp = path.join(TEAM_DIR, path.basename(filename));
+        if (fs.existsSync(fp)) fs.unlinkSync(fp);
+
+        writeTeamMeta(readTeamMeta().filter(m => m.filename !== filename));
+        res.json({ success: true });
+    } else {
+        res.status(400).json({ error: 'No file specified' });
+    }
+});
 
 // ─────────────────────────────────────────────────────────────────────
 // SERVE STATIC FILES
