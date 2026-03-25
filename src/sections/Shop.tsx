@@ -208,7 +208,13 @@ export function Shop() {
 
   return (
     <section ref={sectionRef} id="shop">
-      {lightboxIndex !== null && <Lightbox items={visibleItems} index={lightboxIndex} onClose={() => setLightboxIndex(null)} />}
+      {lightboxIndex !== null && (
+        <Lightbox
+          items={filtered}
+          index={filtered.indexOf(visibleItems[lightboxIndex])}
+          onClose={() => setLightboxIndex(null)}
+        />
+      )}
 
       <div className="max-w-7xl bg-dark mx-auto">
         <h2 className="text-center text-xl md:text-2xl font-bold text-white py-4">SHOP</h2>

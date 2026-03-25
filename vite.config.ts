@@ -90,13 +90,13 @@ function galleryImagesApiPlugin() {
             uploadDir: IMG_DIR, keepExtensions: true, maxFileSize: 10 * 1024 * 1024,
             filename: (_n, _e, part) => `${Date.now()}_${part.originalFilename}`
           });
-          form.parse(req, (err, fields, files) => {
+          form.parse(req, (err: any, fields: any, files: any) => {
             if (err) return json({ error: err.message }, 500);
-            const uploaded = Array.isArray(files.image) ? files.image[0] : (files.image as any);
+            const uploaded = Array.isArray(files.image) ? files.image[0] : files.image;
             if (!uploaded) return json({ error: 'No file received' }, 400);
             const filename = path.basename(uploaded.filepath || uploaded.newFilename || uploaded.path);
-            const alt = Array.isArray(fields.alt) ? fields.alt[0] : (fields.alt as string) || filename;
-            const cats = Array.isArray(fields.categories) ? fields.categories[0] : (fields.categories as string) || '';
+            const alt = (Array.isArray(fields.alt) ? fields.alt[0] : fields.alt) || filename;
+            const cats = (Array.isArray(fields.categories) ? fields.categories[0] : fields.categories) || '';
             const categories = cats ? cats.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
             const meta = readMeta();
             meta.push({ filename, alt, categories });
@@ -181,14 +181,14 @@ function teamMembersApiPlugin() {
             uploadDir: IMG_DIR, keepExtensions: true, maxFileSize: 10 * 1024 * 1024,
             filename: (_n, _e, part) => `${Date.now()}_${part.originalFilename}`
           });
-          form.parse(req, (err, fields, files) => {
+          form.parse(req, (err: any, fields: any, files: any) => {
             if (err) return json({ error: err.message }, 500);
-            const uploaded = Array.isArray(files.image) ? files.image[0] : (files.image as any);
+            const uploaded = Array.isArray(files.image) ? files.image[0] : files.image;
             if (!uploaded) return json({ error: 'No file received' }, 400);
             const filename = path.basename(uploaded.filepath || uploaded.newFilename || uploaded.path);
-            const name = (Array.isArray(fields.name) ? fields.name[0] : fields.name as string) || filename;
-            const role = (Array.isArray(fields.role) ? fields.role[0] : fields.role as string) || '';
-            const order = parseInt((Array.isArray(fields.order) ? fields.order[0] : fields.order as string) || '0');
+            const name = (Array.isArray(fields.name) ? fields.name[0] : fields.name) || filename;
+            const role = (Array.isArray(fields.role) ? fields.role[0] : fields.role) || '';
+            const order = parseInt((Array.isArray(fields.order) ? fields.order[0] : fields.order) || '0');
             const meta = readMeta();
             meta.push({ filename, name, role, order });
             meta.sort((a: any, b: any) => a.order - b.order);
