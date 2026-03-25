@@ -398,6 +398,11 @@ function shopItemsApiPlugin() {
 export default defineConfig({
   base: './',
   plugins: [react(), heroImagesApiPlugin(), galleryImagesApiPlugin(), teamMembersApiPlugin(), shopItemsApiPlugin()],
+  preview: {
+    allowedHosts: [
+      'des.pure-fix.com'
+    ]
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
