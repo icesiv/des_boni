@@ -5,7 +5,8 @@ import { Link } from 'react-router-dom';
 // ── Types ──────────────────────────────────────────────────────────────────
 interface GalleryImage { filename: string; src: string; alt: string; categories: string[]; }
 interface TeamMember { filename: string; src: string; name: string; role: string; order: number; }
-interface ShopItem { id: string; filename: string; src: string; name: string; alt: string; category: string; price: string; link?: string; }
+// Changed 'category' to 'categories' (array) to match Gallery functionality
+interface ShopItem { id: string; filename: string; src: string; name: string; alt: string; categories: string[]; price: string; link?: string; }
 
 const PREDEFINED_CATEGORIES = ['GAMES', 'ANIMATION', '3D PRINT', 'CONCEPT', '2D PAINT', 'PORTRAIT', 'ILLUSTRATION', 'GRAPHIC DESIGN'];
 
@@ -313,11 +314,19 @@ function ShopCard({ item, onDelete, onUpdate }: {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(item.name);
   const [price, setPrice] = useState(item.price);
-  const [category, setCategory] = useState(item.category);
+  const [cats, setCats] = useState<string[]>(item.categories || []);
+  const [customCat, setCustomCat] = useState('');
   const [link, setLink] = useState(item.link || '');
 
-  const save = () => { onUpdate(item.id, { name, price, category, link }); setEditing(false); };
-  const cancel = () => { setName(item.name); setPrice(item.price); setCategory(item.category); setLink(item.link || ''); setEditing(false); };
+  const toggleCat = (cat: string) => setCats(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
+  const addCustom = () => {
+    const v = customCat.trim().toUpperCase();
+    if (v && !cats.includes(v)) setCats(prev => [...prev, v]);
+    setCustomCat('');
+  };
+
+  const save = () => { onUpdate(item.id, { name, price, categories: cats, link }); setEditing(false); };
+  const cancel = () => { setName(item.name); setPrice(item.price); setCats(item.categories || []); setLink(item.link || ''); setEditing(false); };
 
   return (
     <div className="bg-[#0f1724] border border-white/10 rounded-xl overflow-hidden shadow-lg flex flex-col">
@@ -330,16 +339,48 @@ function ShopCard({ item, onDelete, onUpdate }: {
         <div className="absolute top-2 left-2 flex gap-1 pointer-events-none">
           {item.price && <span className="text-[9px] font-bold bg-[#4a9eff]/80 text-white px-1.5 py-0.5 rounded-full">{item.price}</span>}
         </div>
+        {/* Category badges */}
+        <div className="absolute bottom-1 left-1 flex flex-wrap gap-1 pointer-events-none">
+          {item.categories?.map(c => (
+            <span key={c} className="text-[9px] font-semibold bg-[#4a9eff]/80 text-white px-1.5 py-0.5 rounded-full">{c}</span>
+          ))}
+        </div>
       </div>
 
       {editing ? (
-        <div className="p-3 space-y-2 border-t border-white/10">
-          {[['Name', name, setName], ['Price', price, setPrice], ['Category', category, setCategory], ['Link URL', link, setLink]].map(([label, val, set]) => (
-            <div key={label as string}>
-              <label className="text-[10px] text-white/50 block mb-0.5">{label as string}</label>
-              <input value={val as string} onChange={e => (set as any)(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-[#4a9eff]" />
+        <div className="p-3 space-y-3 border-t border-white/10">
+          <div>
+            <label className="text-xs text-white/50 block mb-1">Name</label>
+            <input value={name} onChange={e => setName(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-[#4a9eff]" />
+          </div>
+          <div>
+            <label className="text-xs text-white/50 block mb-1">Price</label>
+            <input value={price} onChange={e => setPrice(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-[#4a9eff]" />
+          </div>
+
+          {/* Category Selection - Matching Gallery Tab */}
+          <div>
+            <label className="text-xs text-white/50 block mb-1">Categories</label>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {PREDEFINED_CATEGORIES.map(cat => (
+                <button key={cat} type="button" onClick={() => toggleCat(cat)}
+                  className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${cats.includes(cat) ? 'bg-[#4a9eff] border-[#4a9eff] text-white' : 'border-white/20 text-white/50 hover:border-white/40'}`}>
+                  {cat}
+                </button>
+              ))}
             </div>
-          ))}
+            <div className="flex gap-1">
+              <input value={customCat} onChange={e => setCustomCat(e.target.value)} onKeyDown={e => e.key === 'Enter' && addCustom()}
+                placeholder="Custom category…" className="flex-1 bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-[#4a9eff]" />
+              <button type="button" onClick={addCustom} className="px-2 py-1 bg-white/10 hover:bg-white/20 text-white text-xs rounded transition-colors">Add</button>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-white/50 block mb-1">Link URL</label>
+            <input value={link} onChange={e => setLink(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-[#4a9eff]" />
+          </div>
+
           <div className="flex gap-2 pt-1">
             <button onClick={save} className="flex-1 flex items-center justify-center gap-1 bg-[#4a9eff] hover:bg-[#3b82f6] text-white px-2 py-1.5 rounded text-xs font-medium"><Check size={12} /> Save</button>
             <button onClick={cancel} className="flex-1 flex items-center justify-center gap-1 bg-white/10 hover:bg-white/20 text-white px-2 py-1.5 rounded text-xs font-medium"><X size={12} /> Cancel</button>
@@ -359,16 +400,23 @@ function ShopCard({ item, onDelete, onUpdate }: {
 }
 
 // ── ArtStation Import Modal ────────────────────────────────────────
-// Paste any ArtStation marketplace URL, fetch meta, download cover image, then save
 function ArtStationImportModal({ onClose, onDone }: { onClose: () => void; onDone: () => Promise<void> }) {
   const [url, setUrl] = useState('');
   const [fetching, setFetching] = useState(false);
   const [scraped, setScraped] = useState<{ name: string; price: string; description: string; filename: string; } | null>(null);
-  const [category, setCategory] = useState('');
+  const [cats, setCats] = useState<string[]>([]);
+  const [customCat, setCustomCat] = useState('');
   const [price, setPrice] = useState('');
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  const toggleCat = (cat: string) => setCats(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
+  const addCustom = () => {
+    const v = customCat.trim().toUpperCase();
+    if (v && !cats.includes(v)) setCats(prev => [...prev, v]);
+    setCustomCat('');
+  };
 
   const scrape = async () => {
     setFetching(true); setError(''); setScraped(null);
@@ -389,7 +437,7 @@ function ArtStationImportModal({ onClose, onDone }: { onClose: () => void; onDon
     await fetch('/api/shop-items', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filename: scraped.filename, name, alt: scraped.description, category, price, link: url }),
+      body: JSON.stringify({ filename: scraped.filename, name, alt: scraped.description, categories: cats, price, link: url }),
     });
     await onDone();
     setSaving(false);
@@ -434,15 +482,26 @@ function ArtStationImportModal({ onClose, onDone }: { onClose: () => void; onDon
                 <label className="text-xs text-white/50 block mb-1">Price</label>
                 <input value={price} onChange={e => setPrice(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-[#4a9eff]" />
               </div>
-              <div className="flex-1">
-                <label className="text-xs text-white/50 block mb-1">Category</label>
-                <input value={category} onChange={e => setCategory(e.target.value.toUpperCase())}
-                  list="shop-cats"
-                  placeholder="e.g. GAMES"
-                  className="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-[#4a9eff]" />
-                <datalist id="shop-cats">{PREDEFINED_CATEGORIES.map(c => <option key={c} value={c} />)}</datalist>
+            </div>
+
+            {/* Category Selection - Matching Gallery Tab */}
+            <div>
+              <label className="text-xs text-white/50 block mb-1">Categories</label>
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {PREDEFINED_CATEGORIES.map(cat => (
+                  <button key={cat} type="button" onClick={() => toggleCat(cat)}
+                    className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${cats.includes(cat) ? 'bg-[#4a9eff] border-[#4a9eff] text-white' : 'border-white/20 text-white/50 hover:border-white/40'}`}>
+                    {cat}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-1">
+                <input value={customCat} onChange={e => setCustomCat(e.target.value)} onKeyDown={e => e.key === 'Enter' && addCustom()}
+                  placeholder="Custom category…" className="flex-1 bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-[#4a9eff]" />
+                <button type="button" onClick={addCustom} className="px-2 py-1 bg-white/10 hover:bg-white/20 text-white text-xs rounded transition-colors">Add</button>
               </div>
             </div>
+
             <button onClick={save} disabled={saving || !scraped.filename}
               className="w-full flex items-center justify-center gap-2 bg-[#4a9eff] hover:bg-[#3b82f6] disabled:opacity-50 text-white py-2.5 rounded-lg font-medium transition-all">
               {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
