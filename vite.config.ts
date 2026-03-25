@@ -459,6 +459,11 @@ function adminAuthPlugin() {
 export default defineConfig({
   base: './',
   plugins: [react(), adminAuthPlugin(), heroImagesApiPlugin(), galleryImagesApiPlugin(), teamMembersApiPlugin(), shopItemsApiPlugin()],
+  preview: {
+    allowedHosts: [
+      'des.pure-fix.com'
+    ]
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
