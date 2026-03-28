@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Upload, Trash2, Image as ImageIcon, Edit2, Check, X, Link as LinkIcon, Loader2, ExternalLink, GripVertical } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 
 // ── DND Kit Imports ────────────────────────────────────────────────────────
 import {
@@ -711,6 +712,7 @@ export function AdminPanel() {
                     await fetch('/api/shop-items', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: item.id, order: item.order }) });
       }
     }
+    toast.success('Order updated successfully');
   };
 
                   const handleHeroUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {

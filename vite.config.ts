@@ -42,11 +42,17 @@ function heroImagesApiPlugin() {
           let updatedMeta = meta.filter((m: any) => files.includes(m.filename));
           let maxOrder = updatedMeta.reduce((max: number, m: any) => Math.max(max, m.order || 0), -1);
           
+          let changed = meta.length !== updatedMeta.length;
           files.forEach(f => {
             if (!updatedMeta.find((m: any) => m.filename === f)) {
               updatedMeta.push({ filename: f, order: ++maxOrder });
+              changed = true;
             }
           });
+          
+          if (changed || !fs.existsSync(META_FILE)) {
+            writeMeta(updatedMeta);
+          }
           
           updatedMeta.sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
           return json(updatedMeta.map((m: any) => ({ ...m, src: `/assets/hero/${m.filename}` })));

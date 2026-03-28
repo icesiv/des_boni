@@ -14,9 +14,9 @@ export function HeroCarousel() {
       .then(data => {
         if (Array.isArray(data)) {
           // data is now [{src, filename, order}]
-          setHeroImages(data.map(item => ({ 
-            src: item.src, 
-            alt: item.filename || item.src.split('/').pop() || 'Slide' 
+          setHeroImages(data.map(item => ({
+            src: item.src,
+            alt: item.filename || item.src.split('/').pop() || 'Slide'
           })));
         }
       })
@@ -58,8 +58,13 @@ export function HeroCarousel() {
     >
       <div className="max-w-7xl mx-auto">
         {/* Carousel Container with 3D perspective */}
+        {/* 
+         Changed from h-[65vh] to:
+         - Mobile: min-h-[calc(100vh-70px)] (Full screen height minus parent padding)
+         - Desktop (md+): aspect-video (16:9 ratio)
+      */}
         <div
-          className="relative overflow-hidden h-[65vh] bg-dark"
+          className="relative overflow-hidden bg-dark min-h-[calc(100vh-70px)] md:min-h-0 md:aspect-video"
         >
           {loading ? (
             <div className="absolute inset-0 flex items-center justify-center">
@@ -162,17 +167,17 @@ export function HeroCarousel() {
       </div>
 
       <style>{`
-        @keyframes pulse {
-          0%, 100% {
-            opacity: 0.7;
-            transform: translateY(-50%) scale(1);
-          }
-          50% {
-            opacity: 1;
-            transform: translateY(-50%) scale(1.2);
-          }
+      @keyframes pulse {
+        0%, 100% {
+          opacity: 0.7;
+          transform: translateY(-50%) scale(1);
         }
-      `}</style>
+        50% {
+          opacity: 1;
+          transform: translateY(-50%) scale(1.2);
+        }
+      }
+    `}</style>
     </section>
   );
 }

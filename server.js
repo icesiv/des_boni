@@ -244,33 +244,68 @@ app.delete('/api/gallery-images', (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────
-// HERO & TEAM APIs (Abbreviated for brevity - copy logic from Gallery if needed)
+// HERO & TEAM APIs
 // ─────────────────────────────────────────────────────────────────────
 
+const HERO_DIR = path.join(__dirname, 'public/assets/hero');
+const HERO_META = path.join(HERO_DIR, 'hero-meta.json');
+if (!fs.existsSync(HERO_DIR)) fs.mkdirSync(HERO_DIR, { recursive: true });
 
-// Hero Placeholder
+const readHeroMeta = () => fs.existsSync(HERO_META) ? JSON.parse(fs.readFileSync(HERO_META, 'utf-8')) : [];
+const writeHeroMeta = (d) => fs.writeFileSync(HERO_META, JSON.stringify(d, null, 2));
+
 app.get('/api/hero-images', (req, res) => {
-    const dir = path.join(__dirname, 'public/assets/hero');
-    if (!fs.existsSync(dir)) return res.json([]);
-    const files = fs.readdirSync(dir).filter(f => /\.(png|jpe?g|gif|webp)$/i.test(f)).sort();
-    res.json(files.map(f => `/assets/hero/${f}`));
+    const files = fs.readdirSync(HERO_DIR).filter(f => /\.(png|jpe?g|gif|webp)$/i.test(f));
+    const meta = readHeroMeta();
+    let updatedMeta = meta.filter(m => files.includes(m.filename));
+    let maxOrder = updatedMeta.reduce((max, m) => Math.max(max, m.order || 0), -1);
+
+    let changed = meta.length !== updatedMeta.length;
+    files.forEach(f => {
+        if (!updatedMeta.find(m => m.filename === f)) {
+            updatedMeta.push({ filename: f, order: ++maxOrder });
+            changed = true;
+        }
+    });
+
+    if (changed || !fs.existsSync(HERO_META)) writeHeroMeta(updatedMeta);
+    updatedMeta.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    res.json(updatedMeta.map(m => ({ ...m, src: `/assets/hero/${m.filename}` })));
 });
+
 app.post('/api/hero-images', (req, res) => {
-    const dir = path.join(__dirname, 'public/assets/hero');
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    const form = formidable({ uploadDir: dir, keepExtensions: true, maxFileSize: 10 * 1024 * 1024, filename: (_n, _e, p) => `${Date.now()}_${p.originalFilename}` });
-    form.parse(req, (err) => {
+    const form = formidable({ uploadDir: HERO_DIR, keepExtensions: true, maxFileSize: 10 * 1024 * 1024, filename: (_n, _e, p) => `${Date.now()}_${p.originalFilename}` });
+    form.parse(req, (err, fields, files) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ success: true });
+        const upl = Array.isArray(files.image) ? files.image[0] : files.image;
+        const filename = path.basename(upl.filepath || upl.newFilename);
+        const meta = readHeroMeta();
+        const maxOrder = meta.reduce((max, m) => Math.max(max, m.order || 0), -1);
+        meta.push({ filename, order: maxOrder + 1 });
+        writeHeroMeta(meta);
+        res.json({ success: true, filename });
     });
 });
+
+app.patch('/api/hero-images', (req, res) => {
+    const { filename, order } = req.body;
+    const meta = readHeroMeta();
+    const idx = meta.findIndex(m => m.filename === filename);
+    if (idx === -1) return res.status(404).json({ error: 'Not found' });
+    if (order !== undefined) meta[idx].order = order;
+    meta.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    writeHeroMeta(meta);
+    res.json({ success: true });
+});
+
 app.delete('/api/hero-images', (req, res) => {
     const file = req.query.file;
     if (file) {
-        const fp = path.join(__dirname, 'public/assets/hero', path.basename(file));
+        const fp = path.join(HERO_DIR, path.basename(file));
         if (fs.existsSync(fp)) fs.unlinkSync(fp);
+        writeHeroMeta(readHeroMeta().filter(m => m.filename !== file));
         res.json({ success: true });
-    }
+    } else res.status(400).json({ error: 'No file' });
 });
 
 // ─────────────────────────────────────────────────────────────────────

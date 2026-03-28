@@ -1,14 +1,14 @@
 [
   {
-    "filename": "1774426923308_team_4.jpg",
-    "name": "LUTHFUN NAHAR",
-    "role": "Managing Diredtor",
-    "order": 0
-  },
-  {
     "filename": "1774453264870_boni.jpg",
     "name": "boni",
     "role": "Proprietor",
+    "order": 0
+  },
+  {
+    "filename": "1774426923308_team_4.jpg",
+    "name": "LUTHFUN NAHAR",
+    "role": "Managing Diredtor",
     "order": 1
   },
   {
