@@ -1,17 +1,5 @@
 [
   {
-    "id": "1774429376846",
-    "filename": "artstation_1774429370538.jpg",
-    "name": "ArtStation - Flame Goblin - Low Poly Game-Ready 3D Character Low-poly 3D model | Game Assets",
-    "alt": "Game Assets - Flame Goblin - Low Poly Game-Ready 3D Character Low-poly 3D model, USD $3.00. This fierce creature features a muscular humanoid body, glowing fiery textures, and menacing horns that bring a sense of...",
-    "category": "3D PRINT",
-    "price": "$3.00",
-    "link": "https://www.artstation.com/marketplace/p/x9W1m/flame-goblin-low-poly-game-ready-3d-character-low-poly-3d-model?utm_source=artstation&utm_medium=referral&utm_campaign=artwork_search&utm_term=marketplace",
-    "categories": [
-      "ILLUSTRATION"
-    ]
-  },
-  {
     "id": "1774449015194",
     "filename": "artstation_1774449009948.jpg",
     "name": "ArtStation - Rugal. Kings of Fighters | Resources",
@@ -30,6 +18,66 @@
     "name": "ArtStation - Bruce Lee  3D model | Resources",
     "alt": "Resources - Bruce Lee  3D model, USD $55.00. fully printable 3d Digital Model of Bruce  Lee. ",
     "price": "$55.00",
-    "link": "https://www.artstation.com/marketplace/p/76BMY/bruce-lee-3d-model"
+    "link": "https://www.artstation.com/marketplace/p/76BMY/bruce-lee-3d-model",
+    "categories": [
+      "3D PRINT",
+      "PORTRAIT"
+    ]
+  },
+  {
+    "id": "1774452375990",
+    "filename": "artstation_1774452372588.jpg",
+    "name": "ArtStation - Sway | Resources",
+    "alt": "Resources - Sway, USD $10.00. A fun Sculpt with my  Friends ",
+    "categories": [
+      "PORTRAIT"
+    ],
+    "price": "$10.00",
+    "link": "https://www.artstation.com/marketplace/p/9pK86/sway"
+  },
+  {
+    "id": "1774525936893",
+    "filename": "artstation_1774525931751.jpg",
+    "name": "ArtStation - Charging Bull . EL Toro Bravo | Resources",
+    "alt": "Resources - Charging Bull . EL Toro Bravo, USD $55.00. https://www.artstation.com/artwork/d08wQA",
+    "categories": [],
+    "price": "$55.00",
+    "link": "https://www.artstation.com/marketplace/p/50LnW/charging-bull-el-toro-bravo"
+  },
+  {
+    "id": "1774525961345",
+    "filename": "artstation_1774525958488.jpg",
+    "name": "ArtStation - Z Blade . Game Stylize  Character with weapons | Game Assets",
+    "alt": "Game Assets - Z Blade . Game Stylize  Character with weapons, USD $25.00. https://www.artstation.com/artwork/J982JRhttps://youtu.be/VF-WWe9BhtY?list=PLaUWJWHhBF2x7VXSzWrtGnuO3xunc0J_4Hello Guys.. This is my own...",
+    "categories": [],
+    "price": "$25.00",
+    "link": "https://www.artstation.com/marketplace/p/dBDAg/z-blade-game-stylize-character-with-weapons"
+  },
+  {
+    "id": "1774526022883",
+    "filename": "artstation_1774526019711.jpg",
+    "name": "ArtStation - Khabib  3D printable | Resources",
+    "alt": "Resources - Khabib  3D printable, USD $150.00. Khabib Nurmagomedov 3D Printable model. including high detail sculpted portrait ,skin, Hairs texture with vertex color.   Rendered in Blander cycle. ",
+    "categories": [],
+    "price": "$150.00",
+    "link": "https://www.artstation.com/marketplace/p/jN8Wn/khabib-3d-printable"
+  },
+  {
+    "id": "1774526045769",
+    "filename": "artstation_1774526043875.jpg",
+    "name": "ArtStation - Kenshin Himura digital 3d sculpture | Resources",
+    "alt": "Resources - Kenshin Himura digital 3d sculpture, USD $55.00. Kenshin Himura  digital 3d...",
+    "categories": [],
+    "price": "$55.00",
+    "link": "https://www.artstation.com/marketplace/p/0wRAv/kenshin-himura-digital-3d-sculpture"
+  },
+  {
+    "id": "1774526069205",
+    "filename": "artstation_1774526064390.jpg",
+    "name": "ArtStation - Ben Kingslay 3D Portrait | Resources",
+    "alt": "Resources - Ben Kingslay 3D Portrait, USD $100.00. https://youtu.be/ePv78SsF7Gs?list=PLaUWJWHhBF2x7VXSzWrtGnuO3xunc0J_4https://youtu.be/Zo0faQ9E34c?list=PLaUWJWHhBF2x7VXSzWrtGnuO3xunc0J_4Ben Kingley portrait sculpture ",
+    "categories": [],
+    "price": "$100.00",
+    "link": "https://www.artstation.com/marketplace/p/3ldk/ben-kingslay-3d-portrait"
   }
 ]
