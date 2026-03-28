@@ -25,7 +25,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { restrictToWindowEdges } from '@dnd-kit/modifiers';
 
 // ── Types ──────────────────────────────────────────────────────────────────
-interface HeroImage { filename: string; src: string; order: number; }
+interface HeroImage { filename: string; src: string; order: number; link?: string; }
 interface GalleryImage { filename: string; src: string; alt: string; categories: string[]; order: number; }
 interface TeamMember { filename: string; src: string; name: string; role: string; order: number; }
 interface ShopItem { id: string; filename: string; src: string; name: string; alt: string; categories: string[]; price: string; link?: string; order: number; }
@@ -226,8 +226,11 @@ function GalleryUploadModal({ onClose, onDone }: { onClose: () => void; onDone: 
 }
 
 // ── Hero Card ───────────────────────────────────────────────────────────────
-function HeroCard({ url, onDelete }: { url: string; onDelete: (filename: string) => void }) {
-  const filename = url.split('/').pop() || url;
+function HeroCard({ item, onDelete, onUpdate }: { 
+  item: HeroImage; 
+  onDelete: (filename: string) => void;
+  onUpdate: (filename: string, updates: Partial<HeroImage>) => void;
+}) {
   const {
     attributes,
     listeners,
@@ -235,7 +238,7 @@ function HeroCard({ url, onDelete }: { url: string; onDelete: (filename: string)
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: filename });
+  } = useSortable({ id: item.filename });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -244,22 +247,59 @@ function HeroCard({ url, onDelete }: { url: string; onDelete: (filename: string)
     opacity: isDragging ? 0.3 : 1,
   };
 
+  const [editing, setEditing] = useState(false);
+  const [link, setLink] = useState(item.link || '');
+
+  const save = () => { onUpdate(item.filename, { link }); setEditing(false); };
+  const cancel = () => { setLink(item.link || ''); setEditing(false); };
+
   return (
-    <div ref={setNodeRef} style={style} className="group/card relative aspect-video bg-black/50 rounded-lg overflow-hidden border border-white/10">
-      <img src={url} alt={filename} className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-105" />
+    <div ref={setNodeRef} style={style} className="group/card relative flex flex-col bg-[#0f1724] border border-white/10 rounded-xl overflow-hidden shadow-lg">
+      <div className="relative aspect-video group">
+        <img src={item.src} alt={item.filename} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
 
-      {/* Drag Handle */}
-      <div {...attributes} {...listeners} className="absolute top-2 left-2 p-1.5 bg-black/60 text-white/50 hover:text-white rounded-md cursor-grab active:cursor-grabbing opacity-0 group-hover/card:opacity-100 transition-opacity z-30">
-        <GripVertical size={16} />
+        {/* Drag Handle */}
+        <div {...attributes} {...listeners} className="absolute top-2 left-2 p-1.5 bg-black/60 text-white/50 hover:text-white rounded-md cursor-grab active:cursor-grabbing opacity-0 group-hover/card:opacity-100 transition-opacity z-30">
+          <GripVertical size={16} />
+        </div>
+
+        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 z-20">
+          <button onClick={() => setEditing(true)} className="p-2.5 bg-[#4a9eff]/80 hover:bg-[#4a9eff] text-white rounded-full transition-colors">
+            <Edit2 size={18} />
+          </button>
+          <button onClick={() => onDelete(item.filename)} className="p-2.5 bg-red-500/80 hover:bg-red-600 text-white rounded-full transition-colors">
+            <Trash2 size={18} />
+          </button>
+        </div>
+
+        {item.link && (
+          <div className="absolute top-2 right-2 p-1.5 bg-[#4a9eff]/80 text-white rounded-md z-30 pointer-events-none">
+            <LinkIcon size={14} />
+          </div>
+        )}
       </div>
 
-      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-20">
-        <button onClick={() => onDelete(filename)} className="p-2.5 bg-red-500/80 hover:bg-red-600 text-white rounded-full transition-colors">
-          <Trash2 size={20} />
-        </button>
-      </div>
-      <div className="absolute bottom-0 left-0 right-0 p-1.5 bg-gradient-to-t from-black/90 to-transparent pointer-events-none z-10">
-        <p className="text-[10px] text-white/60 truncate">{filename}</p>
+      {editing && (
+        <div className="p-3 space-y-2 border-t border-white/10">
+          <div>
+            <label className="text-[10px] text-white/50 block mb-1">Click URL (optional)</label>
+            <input value={link} onChange={e => setLink(e.target.value)}
+              placeholder="https://..." className="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#4a9eff]" />
+          </div>
+          <div className="grid grid-cols-2 gap-2 mt-1">
+            <button onClick={save} className="flex items-center justify-center gap-1 bg-[#4a9eff] hover:bg-[#3b82f6] text-white py-1.5 rounded text-[10px] font-medium transition-all">
+              <Check size={12} /> Save
+            </button>
+            <button onClick={cancel} className="flex items-center justify-center gap-1 bg-white/10 hover:bg-white/20 text-white py-1.5 rounded text-[10px] font-medium transition-all">
+              <X size={12} /> Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Filename footer */}
+      <div className="p-2 bg-black/40 backdrop-blur-sm border-t border-white/5">
+        <p className="text-[10px] text-white/40 truncate">{item.filename}</p>
       </div>
     </div>
   );
@@ -730,6 +770,11 @@ export function AdminPanel() {
                     fetchHero();
   };
 
+  const handleHeroUpdate = async (filename: string, updates: Partial<HeroImage>) => {
+    await fetch('/api/hero-images', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename, ...updates }) });
+    fetchHero();
+  };
+
   const handleGalleryDelete = async (filename: string) => {
     if (!confirm('Delete this image?')) return;
                     await fetch(`/api/gallery-images?file=${encodeURIComponent(filename)}`, {method: 'DELETE' });
@@ -812,7 +857,7 @@ export function AdminPanel() {
                                   <SortableContext items={heroImages.map(img => img.filename)} strategy={rectSortingStrategy}>
                                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                                       {heroImages.map((img) => (
-                                        <HeroCard key={img.filename} url={img.src} onDelete={handleHeroDelete} />
+                                        <HeroCard key={img.filename} item={img} onDelete={handleHeroDelete} onUpdate={handleHeroUpdate} />
                                       ))}
                                     </div>
                                   </SortableContext>

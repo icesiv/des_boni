@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 
 export function HeroCarousel() {
-  const [heroImages, setHeroImages] = useState<{ src: string, alt: string }[]>([]);
+  const [heroImages, setHeroImages] = useState<{ src: string, alt: string, link?: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -13,10 +13,11 @@ export function HeroCarousel() {
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
-          // data is now [{src, filename, order}]
+          // data is now [{src, filename, order, link}]
           setHeroImages(data.map(item => ({
             src: item.src,
-            alt: item.filename || item.src.split('/').pop() || 'Slide'
+            alt: item.filename || item.src.split('/').pop() || 'Slide',
+            link: item.link
           })));
         }
       })
@@ -64,7 +65,7 @@ export function HeroCarousel() {
          - Desktop (md+): aspect-video (16:9 ratio)
       */}
         <div
-          className="relative overflow-hidden bg-dark min-h-[calc(100vh-70px)] md:min-h-0 md:aspect-video"
+          className="relative overflow-hidden bg-dark h-[calc(100vh-70px)] md:min-h-0 md:h-auto md:aspect-video [perspective:1000px]"
         >
           {loading ? (
             <div className="absolute inset-0 flex items-center justify-center">
@@ -88,7 +89,7 @@ export function HeroCarousel() {
                     <div
                       key={index}
                       className={`absolute inset-0 transition-all duration-600 ${isActive ? 'z-20' : 'z-10'
-                        }`}
+                        } ${image.link ? 'cursor-pointer' : ''}`}
                       style={{
                         transform: isActive
                           ? 'rotateY(0deg) translateZ(100px)'
@@ -109,14 +110,24 @@ export function HeroCarousel() {
                         alt=""
                         className="absolute inset-0 w-full h-full object-fill blur-2xl scale-110 opacity-50"
                       />
-                      {/* Foreground Fitted Image */}
-                      <img
-                        src={image.src}
-                        alt={image.alt}
-                        className="absolute z-10 top-0 left-1/2 -translate-x-1/2 h-full w-auto max-w-none"
-                      />
+                      {/* Foreground Fitted Image - Wrappable in link */}
+                      {image.link ? (
+                        <a href={image.link} target="_blank" rel="noopener noreferrer" className="absolute z-10 top-0 left-1/2 -translate-x-1/2 w-full h-full md:w-auto md:h-full md:max-w-none block hover:brightness-110 transition-all">
+                          <img
+                            src={image.src}
+                            alt={image.alt}
+                            className="w-full h-full object-contain md:w-auto md:h-full md:max-w-none"
+                          />
+                        </a>
+                      ) : (
+                        <img
+                          src={image.src}
+                          alt={image.alt}
+                          className="absolute z-10 top-0 left-1/2 -translate-x-1/2 w-full h-full object-contain md:w-auto md:h-full md:max-w-none"
+                        />
+                      )}
                       {/* Subtle gradient overlay */}
-                      <div className="absolute inset-0 z-20 bg-gradient-to-t from-[#1a1f2e]/30 to-transparent" />
+                      <div className="absolute inset-0 z-20 bg-gradient-to-t from-[#1a1f2e]/30 to-transparent pointer-events-none" />
                     </div>
                   );
                 })}

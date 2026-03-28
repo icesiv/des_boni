@@ -69,7 +69,7 @@ export function Header() {
               </div>
               <span
                 style={{ fontFamily: '"Graduate", sans-serif' }}
-                className={`font-extrabold pt-8 text-white transition-all duration-300 ${isScrolled ? 'text-base' : 'text-xl'
+                className={`font-extrabold md:pt-8 text-white transition-all duration-300 ${isScrolled ? 'text-base' : 'text-base md:text-xl'
                   }`}
               >
                 DYNAMIC CREATIVE STUDIOS

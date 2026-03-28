@@ -29,8 +29,11 @@ export function ContactUs() {
   }, []);
 
   return (
-    <section ref={sectionRef} id="contact" className="relative overflow-hidden">
-      {/* Section Title */}
+    <section
+      ref={sectionRef}
+      id="contact"
+      className="relative min-h-[70vh] md:min-h-0 overflow-hidden"
+    >      {/* Section Title */}
       <div className="max-w-7xl bg-dark mx-auto">
         <h2 className="text-center text-xl md:text-2xl font-bold text-white py-4">CONTACT US</h2>
       </div>
@@ -40,7 +43,7 @@ export function ContactUs() {
         <img
           src="/assets/common/asset_19.jpg"
           alt="Angel statue background"
-          className="w-full object-contain"
+          className="h-dvh w-full object-cover md:h-full md:object-contain"
         />
 
         {/* Overlay content centred on the image */}

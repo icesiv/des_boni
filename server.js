@@ -281,18 +281,19 @@ app.post('/api/hero-images', (req, res) => {
         const filename = path.basename(upl.filepath || upl.newFilename);
         const meta = readHeroMeta();
         const maxOrder = meta.reduce((max, m) => Math.max(max, m.order || 0), -1);
-        meta.push({ filename, order: maxOrder + 1 });
+        meta.push({ filename, order: maxOrder + 1, link: '' });
         writeHeroMeta(meta);
         res.json({ success: true, filename });
     });
 });
 
 app.patch('/api/hero-images', (req, res) => {
-    const { filename, order } = req.body;
+    const { filename, order, link } = req.body;
     const meta = readHeroMeta();
     const idx = meta.findIndex(m => m.filename === filename);
     if (idx === -1) return res.status(404).json({ error: 'Not found' });
     if (order !== undefined) meta[idx].order = order;
+    if (link !== undefined) meta[idx].link = link;
     meta.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     writeHeroMeta(meta);
     res.json({ success: true });

@@ -67,7 +67,7 @@ function heroImagesApiPlugin() {
               const filename = path.basename(uploaded.filepath || uploaded.newFilename || uploaded.path);
               const meta = readMeta();
               const maxOrder = meta.reduce((max: number, m: any) => Math.max(max, m.order || 0), -1);
-              meta.push({ filename, order: maxOrder + 1 });
+              meta.push({ filename, order: maxOrder + 1, link: '' });
               writeMeta(meta);
             }
             json({ success: true });
@@ -80,11 +80,12 @@ function heroImagesApiPlugin() {
           req.on('data', (c: Buffer) => { body += c; });
           req.on('end', () => {
             try {
-              const { filename, order } = JSON.parse(body);
+              const { filename, order, link } = JSON.parse(body);
               const meta = readMeta();
               const idx = meta.findIndex((m: any) => m.filename === filename);
               if (idx === -1) return json({ error: 'Not found' }, 404);
               if (order !== undefined) meta[idx].order = order;
+              if (link !== undefined) meta[idx].link = link;
               meta.sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
               writeMeta(meta);
               json({ success: true });

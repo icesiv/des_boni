@@ -242,9 +242,11 @@ export function Shop() {
                   <div key={item.id} onClick={() => setLightboxIndex(index)}
                     className={`group bg-black p-1 relative overflow-hidden cursor-pointer transition-all duration-700 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
                     style={{ transform: isVisible ? 'rotateY(0deg)' : 'rotateY(-90deg)', transformStyle: 'preserve-3d', transitionDelay: `${300 + index * 100}ms`, transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)' }}>
-                    <div className="aspect-[1/1] overflow-hidden">
-                      <img src={item.src} alt={item.alt} className="w-full h-full object-cover transition-all duration-500 group-hover:scale-110" />
-                    </div>
+
+                    {/* Changed aspect ratio to 16:9 using aspect-video */}
+                    {/* <div className="aspect-video overflow-hidden"> */}
+                    <img src={item.src} alt={item.alt} className="w-full h-full object-contain transition-all duration-500 group-hover:scale-110" />
+
                     {/* badges */}
                     <div className="absolute top-2 left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
                       <span className="text-[10px] font-bold bg-[#4a9eff]/80 text-white px-2 py-0.5 rounded-full">{item.price}</span>
@@ -277,7 +279,8 @@ export function Shop() {
               {hasMore && (
                 <div className="flex justify-center mt-8">
                   <button
-                    onClick={() => setVisibleCount(prev => prev + 6)}
+                    // Changed increment from 6 to 9
+                    onClick={() => setVisibleCount(prev => prev + 9)}
                     className="flex items-center gap-2 px-6 py-2.5 bg-[#4a9eff]/10 hover:bg-[#4a9eff]/20 text-[#4a9eff] font-semibold rounded-lg transition-colors border border-[#4a9eff]/30 hover:border-[#4a9eff]/60"
                   >
                     <Plus size={18} />
