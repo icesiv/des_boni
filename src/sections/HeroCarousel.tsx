@@ -13,7 +13,11 @@ export function HeroCarousel() {
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
-          setHeroImages(data.map(url => ({ src: url, alt: url.split('/').pop() || 'Slide' })));
+          // data is now [{src, filename, order}]
+          setHeroImages(data.map(item => ({ 
+            src: item.src, 
+            alt: item.filename || item.src.split('/').pop() || 'Slide' 
+          })));
         }
       })
       .catch(err => {

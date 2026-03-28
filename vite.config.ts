@@ -11,26 +11,78 @@ const getFormField = (fields: formidable.Fields, name: string) => {
 
 // ── Hero Images API ────────────────────────────────────────────────────────
 function heroImagesApiPlugin() {
+  const IMG_DIR = path.resolve(__dirname, './public/assets/hero');
+  const META_FILE = path.join(IMG_DIR, 'hero-meta.json');
+
+  function readMeta() {
+    if (!fs.existsSync(META_FILE)) return [];
+    try { return JSON.parse(fs.readFileSync(META_FILE, 'utf-8')); } catch { return []; }
+  }
+  function writeMeta(data: any[]) {
+    fs.writeFileSync(META_FILE, JSON.stringify(data, null, 2));
+  }
+
   return {
     name: 'hero-images-api',
     configureServer(server: any) {
       server.middlewares.use('/api/hero-images', async (req: any, res: any, next: any) => {
-        const targetDir = path.resolve(__dirname, './public/assets/hero');
-        if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
+        if (!fs.existsSync(IMG_DIR)) fs.mkdirSync(IMG_DIR, { recursive: true });
+
+        const json = (data: any, status = 200) => {
+          res.statusCode = status;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify(data));
+        };
 
         if (req.method === 'GET') {
-          const files = fs.readdirSync(targetDir);
-          const images = files.filter(f => /\.(png|jpe?g|gif|webp)$/i.test(f)).sort().map(f => `/assets/hero/${f}`);
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify(images));
-          return;
+          const files = fs.readdirSync(IMG_DIR).filter(f => /\.(png|jpe?g|gif|webp)$/i.test(f));
+          const meta = readMeta();
+          
+          // Sync meta with files
+          let updatedMeta = meta.filter((m: any) => files.includes(m.filename));
+          let maxOrder = updatedMeta.reduce((max: number, m: any) => Math.max(max, m.order || 0), -1);
+          
+          files.forEach(f => {
+            if (!updatedMeta.find((m: any) => m.filename === f)) {
+              updatedMeta.push({ filename: f, order: ++maxOrder });
+            }
+          });
+          
+          updatedMeta.sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
+          return json(updatedMeta.map((m: any) => ({ ...m, src: `/assets/hero/${m.filename}` })));
         }
 
         if (req.method === 'POST') {
-          const form = formidable({ uploadDir: targetDir, keepExtensions: true, maxFileSize: 10 * 1024 * 1024, filename: (_n, _e, part) => `${Date.now()}_${part.originalFilename}` });
-          form.parse(req, (err) => {
-            res.setHeader('Content-Type', 'application/json');
-            res.end(err ? JSON.stringify({ error: err.message }) : JSON.stringify({ success: true }));
+          const form = formidable({ uploadDir: IMG_DIR, keepExtensions: true, maxFileSize: 10 * 1024 * 1024, filename: (_n, _e, part) => `${Date.now()}_${part.originalFilename}` });
+          form.parse(req, (err, _fields, files) => {
+            if (err) return json({ error: err.message }, 500);
+            const uploaded = Array.isArray(files.image) ? files.image[0] : (files.image as any);
+            if (uploaded) {
+              const filename = path.basename(uploaded.filepath || uploaded.newFilename || uploaded.path);
+              const meta = readMeta();
+              const maxOrder = meta.reduce((max: number, m: any) => Math.max(max, m.order || 0), -1);
+              meta.push({ filename, order: maxOrder + 1 });
+              writeMeta(meta);
+            }
+            json({ success: true });
+          });
+          return;
+        }
+
+        if (req.method === 'PATCH') {
+          let body = '';
+          req.on('data', (c: Buffer) => { body += c; });
+          req.on('end', () => {
+            try {
+              const { filename, order } = JSON.parse(body);
+              const meta = readMeta();
+              const idx = meta.findIndex((m: any) => m.filename === filename);
+              if (idx === -1) return json({ error: 'Not found' }, 404);
+              if (order !== undefined) meta[idx].order = order;
+              meta.sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
+              writeMeta(meta);
+              json({ success: true });
+            } catch { json({ error: 'Invalid JSON' }, 400); }
           });
           return;
         }
@@ -39,11 +91,12 @@ function heroImagesApiPlugin() {
           const qs = new URL(req.url, `http://${req.headers.host}`);
           const filename = qs.searchParams.get('file');
           if (filename) {
-            const fp = path.join(targetDir, path.basename(filename));
+            const basename = path.basename(filename);
+            const fp = path.join(IMG_DIR, basename);
             if (fs.existsSync(fp)) fs.unlinkSync(fp);
-            res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ success: true }));
-            return;
+            const meta = readMeta().filter((m: any) => m.filename !== basename);
+            writeMeta(meta);
+            return json({ success: true });
           }
         }
         next();
@@ -54,7 +107,7 @@ function heroImagesApiPlugin() {
 
 // ── Gallery Images API ─────────────────────────────────────────────────────
 // Data model: public/assets/gallery/gallery-meta.json
-//   [ { filename: "abc.jpg", alt: "...", categories: ["GAMES","3D PRINT"] }, ... ]
+//   [ { filename: "abc.jpg", alt: "...", categories: ["GAMES","3D PRINT"], order: 0 }, ... ]
 
 function galleryImagesApiPlugin() {
   const IMG_DIR = path.resolve(__dirname, './public/assets/gallery');
@@ -83,6 +136,7 @@ function galleryImagesApiPlugin() {
         // GET → list all with metadata
         if (req.method === 'GET') {
           const meta = readMeta();
+          meta.sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
           // Enrich with full src path
           const result = meta.map((m: any) => ({ ...m, src: `/assets/gallery/${m.filename}` }));
           return json(result);
@@ -104,24 +158,31 @@ function galleryImagesApiPlugin() {
             const cats = getFormField(fields, 'categories');
             const categories = cats ? cats.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
             const meta = readMeta();
-            meta.push({ filename, alt, categories });
+            const maxOrder = meta.reduce((max: number, m: any) => Math.max(max, m.order || 0), -1);
+            meta.push({ filename, alt, categories, order: maxOrder + 1 });
             writeMeta(meta);
             json({ success: true, filename, alt, categories });
           });
           return;
         }
 
-        // PATCH /api/gallery-images → update alt/categories for existing image
+        // PATCH /api/gallery-images → update alt/categories/order for existing image
         if (req.method === 'PATCH') {
           let body = '';
           req.on('data', (c: Buffer) => { body += c; });
           req.on('end', () => {
             try {
-              const { filename, alt, categories } = JSON.parse(body);
+              const { filename, alt, categories, order } = JSON.parse(body);
               const meta = readMeta();
               const idx = meta.findIndex((m: any) => m.filename === filename);
               if (idx === -1) return json({ error: 'Not found' }, 404);
-              meta[idx] = { ...meta[idx], alt: alt ?? meta[idx].alt, categories: categories ?? meta[idx].categories };
+              meta[idx] = { 
+                ...meta[idx], 
+                alt: alt ?? meta[idx].alt, 
+                categories: categories ?? meta[idx].categories,
+                order: order ?? meta[idx].order
+              };
+              meta.sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
               writeMeta(meta);
               json({ success: true });
             } catch { json({ error: 'Invalid JSON' }, 400); }
@@ -150,7 +211,7 @@ function galleryImagesApiPlugin() {
 
 // ── Team Members API ───────────────────────────────────────────────────────
 // Data model: public/assets/team/team-meta.json
-//   [ { filename: "abc.jpg", name: "...", role: "..." }, ... ]
+//   [ { filename: "abc.jpg", name: "...", role: "...", order: 0 }, ... ]
 
 function teamMembersApiPlugin() {
   const IMG_DIR = path.resolve(__dirname, './public/assets/team');
@@ -178,6 +239,7 @@ function teamMembersApiPlugin() {
 
         if (req.method === 'GET') {
           const meta = readMeta();
+          meta.sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
           return json(meta.map((m: any) => ({ ...m, src: `/assets/team/${m.filename}` })));
         }
 
@@ -196,7 +258,7 @@ function teamMembersApiPlugin() {
             const order = parseInt(getFormField(fields, 'order') || '0');
             const meta = readMeta();
             meta.push({ filename, name, role, order });
-            meta.sort((a: any, b: any) => a.order - b.order);
+            meta.sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
             writeMeta(meta);
             json({ success: true, filename, name, role, order });
           });
@@ -213,7 +275,7 @@ function teamMembersApiPlugin() {
               const idx = meta.findIndex((m: any) => m.filename === filename);
               if (idx === -1) return json({ error: 'Not found' }, 404);
               meta[idx] = { ...meta[idx], name: name ?? meta[idx].name, role: role ?? meta[idx].role, order: order ?? meta[idx].order };
-              meta.sort((a: any, b: any) => a.order - b.order);
+              meta.sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
               writeMeta(meta);
               json({ success: true });
             } catch { json({ error: 'Invalid JSON' }, 400); }
@@ -319,7 +381,9 @@ function shopItemsApiPlugin() {
         const json = (data: any, status = 200) => { res.statusCode = status; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(data)); };
 
         if (req.method === 'GET') {
-          return json(readMeta().map((m: any) => ({ ...m, src: `/assets/shop/${m.filename}` })));
+          const meta = readMeta();
+          meta.sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
+          return json(meta.map((m: any) => ({ ...m, src: `/assets/shop/${m.filename}` })));
         }
 
         if (req.method === 'POST') {
@@ -332,6 +396,7 @@ function shopItemsApiPlugin() {
               if (!uploaded) return json({ error: 'No file' }, 400);
               const filename = path.basename(uploaded.filepath || uploaded.newFilename || uploaded.path);
               const meta = readMeta();
+              const maxOrder = meta.reduce((max: number, m: any) => Math.max(max, m.order || 0), -1);
               meta.push({
                 id: Date.now().toString(),
                 filename,
@@ -339,7 +404,8 @@ function shopItemsApiPlugin() {
                 alt: getFormField(fields, 'alt'),
                 category: getFormField(fields, 'category'),
                 price: getFormField(fields, 'price'),
-                link: getFormField(fields, 'link')
+                link: getFormField(fields, 'link'),
+                order: maxOrder + 1
               });
               writeMeta(meta);
               json({ success: true });
@@ -351,7 +417,8 @@ function shopItemsApiPlugin() {
               try {
                 const { filename, name, alt, category, price, link } = JSON.parse(body);
                 const meta = readMeta();
-                meta.push({ id: Date.now().toString(), filename, name, alt, category, price, link });
+                const maxOrder = meta.reduce((max: number, m: any) => Math.max(max, m.order || 0), -1);
+                meta.push({ id: Date.now().toString(), filename, name, alt, category, price, link, order: maxOrder + 1 });
                 writeMeta(meta);
                 json({ success: true });
               } catch { json({ error: 'Invalid JSON' }, 400); }
@@ -370,6 +437,7 @@ function shopItemsApiPlugin() {
               const idx = meta.findIndex((m: any) => m.id === id);
               if (idx === -1) return json({ error: 'Not found' }, 404);
               meta[idx] = { ...meta[idx], ...updates };
+              meta.sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
               writeMeta(meta);
               json({ success: true });
             } catch { json({ error: 'Invalid JSON' }, 400); }
@@ -393,6 +461,7 @@ function shopItemsApiPlugin() {
     }
   }
 }
+
 
 // https://vite.dev/config/
 export default defineConfig({
