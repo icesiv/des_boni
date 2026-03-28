@@ -22,16 +22,20 @@ export function Portfolio() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#1a1f2e]">
-      <Header />
-      <main className="relative">
-        <HeroCarousel />
-        <Gallery />
-        <Shop />
-        <AboutUs />
-        <ContactUs />
-      </main>
-      <Footer />
+    <div className="min-h-screen bg-gradient-to-b from-[#1b2b43] to-[#09090b]">
+      <div className="max-w-7xl mx-auto shadow-[0_0_280px_rgba(255,255,255,.1),_0_10px_20px_rgba(0,0,0,.8)]">
+
+        <Header />
+        <main className="relative ">
+          <HeroCarousel />
+          <Gallery />
+          <Shop />
+          <AboutUs />
+          <ContactUs />
+        </main>
+        <Footer />
+
+      </div>
     </div>
   );
 }

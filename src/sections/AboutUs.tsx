@@ -41,7 +41,7 @@ export function AboutUs() {
   ];
 
   return (
-    <section ref={sectionRef} id="about" className="bg-[#1a1f2e]">
+    <section ref={sectionRef} id="about">
       <div className="max-w-7xl mx-auto">
         <div className="max-w-7xl bg-dark mx-auto">
           <h2 className="text-center text-xl md:text-2xl font-bold text-white py-4">ABOUT US</h2>

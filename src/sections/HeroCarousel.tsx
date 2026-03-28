@@ -55,7 +55,7 @@ export function HeroCarousel() {
       <div className="max-w-7xl mx-auto">
         {/* Carousel Container with 3D perspective */}
         <div
-          className="relative overflow-hidden h-[80vh] bg-dark"
+          className="relative overflow-hidden h-[65vh] bg-dark"
         >
           {loading ? (
             <div className="absolute inset-0 flex items-center justify-center">

@@ -26,7 +26,7 @@ export function Footer() {
   return (
     <footer
       ref={footerRef}
-      className="bg-[#242b3d] border-t border-[#3d4554]"
+      className="bg-[#242b3d] border-t border-[#3d4554] max-w-7xl mx-auto"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
