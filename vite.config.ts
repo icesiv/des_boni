@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 import fs from "fs"
 import formidable from "formidable"
+import crypto from "crypto"
 
 const getFormField = (fields: formidable.Fields, name: string) => {
   const field = fields[name];
@@ -161,14 +162,15 @@ function galleryImagesApiPlugin() {
             const uploaded = Array.isArray(files.image) ? files.image[0] : (files.image as any);
             if (!uploaded) return json({ error: 'No file received' }, 400);
             const filename = path.basename(uploaded.filepath || uploaded.newFilename || uploaded.path);
-            const alt = getFormField(fields, 'alt') || filename;
+            const name = getFormField(fields, 'alt') || filename;
+            const link = getFormField(fields, 'link');
             const cats = getFormField(fields, 'categories');
             const categories = cats ? cats.split(',').map((c: string) => c.trim()).filter(Boolean) : [];
             const meta = readMeta();
             const maxOrder = meta.reduce((max: number, m: any) => Math.max(max, m.order || 0), -1);
-            meta.push({ filename, alt, categories, order: maxOrder + 1 });
+            meta.push({ filename, alt: name, categories, order: maxOrder + 1, link });
             writeMeta(meta);
-            json({ success: true, filename, alt, categories });
+            json({ success: true, filename, alt: name, categories, link });
           });
           return;
         }
@@ -179,7 +181,7 @@ function galleryImagesApiPlugin() {
           req.on('data', (c: Buffer) => { body += c; });
           req.on('end', () => {
             try {
-              const { filename, alt, categories, order } = JSON.parse(body);
+              const { filename, alt, categories, order, link } = JSON.parse(body);
               const meta = readMeta();
               const idx = meta.findIndex((m: any) => m.filename === filename);
               if (idx === -1) return json({ error: 'Not found' }, 404);
@@ -187,7 +189,8 @@ function galleryImagesApiPlugin() {
                 ...meta[idx], 
                 alt: alt ?? meta[idx].alt, 
                 categories: categories ?? meta[idx].categories,
-                order: order ?? meta[idx].order
+                order: order ?? meta[idx].order,
+                link: link ?? meta[idx].link
               };
               meta.sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
               writeMeta(meta);
@@ -470,10 +473,87 @@ function shopItemsApiPlugin() {
 }
 
 
+function adminAuthApiPlugin() {
+  const AUTH_DIR = path.resolve(__dirname, './public/assets/admin');
+  const AUTH_FILE = path.join(AUTH_DIR, 'auth-meta.json');
+  const DEFAULT_PASS = "1111";
+
+  function getHash(p: string) {
+    return crypto.createHash('sha256').update(p).digest('hex');
+  }
+
+  function readAuth() {
+    if (!fs.existsSync(AUTH_DIR)) fs.mkdirSync(AUTH_DIR, { recursive: true });
+    if (!fs.existsSync(AUTH_FILE)) {
+      const initial = { passwordHash: getHash(DEFAULT_PASS) };
+      fs.writeFileSync(AUTH_FILE, JSON.stringify(initial, null, 2));
+      return initial;
+    }
+    try { return JSON.parse(fs.readFileSync(AUTH_FILE, 'utf-8')); } catch { return { passwordHash: getHash(DEFAULT_PASS) }; }
+  }
+
+  return {
+    name: 'admin-auth-api',
+    configureServer(server: any) {
+      server.middlewares.use('/api', (req: any, res: any, next: any) => {
+        const json = (data: any, status = 200) => {
+          res.statusCode = status;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify(data));
+        };
+
+        if (req.url === '/login' && req.method === 'POST') {
+          let body = '';
+          req.on('data', (c: Buffer) => { body += c; });
+          req.on('end', () => {
+            try {
+              const { password } = JSON.parse(body);
+              const auth = readAuth();
+              if (getHash(password) === auth.passwordHash) {
+                // Return the hash as a simple token for this single-user app
+                return json({ success: true, token: auth.passwordHash });
+              }
+              json({ error: 'Invalid password' }, 401);
+            } catch { json({ error: 'Invalid JSON' }, 400); }
+          });
+          return;
+        }
+
+        if (req.url === '/check-auth' && req.method === 'GET') {
+          const token = req.headers['authorization'];
+          const auth = readAuth();
+          if (token === auth.passwordHash) return json({ success: true });
+          return json({ error: 'Unauthorized' }, 401);
+        }
+
+        if (req.url === '/change-password' && req.method === 'POST') {
+          const token = req.headers['authorization'];
+          const auth = readAuth();
+          if (token !== auth.passwordHash) return json({ error: 'Unauthorized' }, 401);
+
+          let body = '';
+          req.on('data', (c: Buffer) => { body += c; });
+          req.on('end', () => {
+            try {
+              const { newPassword } = JSON.parse(body);
+              if (!newPassword) return json({ error: 'Password required' }, 400);
+              const newHash = getHash(newPassword);
+              fs.writeFileSync(AUTH_FILE, JSON.stringify({ passwordHash: newHash }, null, 2));
+              json({ success: true, token: newHash });
+            } catch { json({ error: 'Invalid JSON' }, 400); }
+          });
+          return;
+        }
+        next();
+      });
+    }
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   base: './',
-  plugins: [react(), heroImagesApiPlugin(), galleryImagesApiPlugin(), teamMembersApiPlugin(), shopItemsApiPlugin()],
+  plugins: [react(), heroImagesApiPlugin(), galleryImagesApiPlugin(), teamMembersApiPlugin(), shopItemsApiPlugin(), adminAuthApiPlugin()],
   preview: {
     allowedHosts: [
       'des.pure-fix.com'

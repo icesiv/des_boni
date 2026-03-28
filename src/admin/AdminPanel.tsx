@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Upload, Trash2, Image as ImageIcon, Edit2, Check, X, Link as LinkIcon, Loader2, ExternalLink, GripVertical } from 'lucide-react';
+import { Upload, Trash2, Image as ImageIcon, Edit2, Check, X, Link as LinkIcon, Loader2, ExternalLink, GripVertical, Lock, LogOut, Shield, Key } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -26,7 +26,7 @@ import { restrictToWindowEdges } from '@dnd-kit/modifiers';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface HeroImage { filename: string; src: string; order: number; link?: string; }
-interface GalleryImage { filename: string; src: string; alt: string; categories: string[]; order: number; }
+interface GalleryImage { filename: string; src: string; alt: string; categories: string[]; order: number; link?: string; }
 interface TeamMember { filename: string; src: string; name: string; role: string; order: number; }
 interface ShopItem { id: string; filename: string; src: string; name: string; alt: string; categories: string[]; price: string; link?: string; order: number; }
 
@@ -36,7 +36,7 @@ const PREDEFINED_CATEGORIES = ['GAMES', 'ANIMATION', '3D PRINT', 'CONCEPT', '2D 
 function GalleryCard({ image, onDelete, onUpdate }: {
   image: GalleryImage;
   onDelete: (filename: string) => void;
-  onUpdate: (filename: string, alt: string, categories: string[]) => void;
+  onUpdate: (filename: string, alt: string, categories: string[], link?: string) => void;
 }) {
   const {
     attributes,
@@ -57,6 +57,7 @@ function GalleryCard({ image, onDelete, onUpdate }: {
   const [editing, setEditing] = useState(false);
   const [alt, setAlt] = useState(image.alt);
   const [cats, setCats] = useState<string[]>(image.categories);
+  const [link, setLink] = useState(image.link || '');
   const [customCat, setCustomCat] = useState('');
 
   const toggleCat = (cat: string) => setCats(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
@@ -66,8 +67,8 @@ function GalleryCard({ image, onDelete, onUpdate }: {
     setCustomCat('');
   };
 
-  const save = () => { onUpdate(image.filename, alt, cats); setEditing(false); };
-  const cancel = () => { setAlt(image.alt); setCats(image.categories); setEditing(false); };
+  const save = () => { onUpdate(image.filename, alt, cats, link); setEditing(false); };
+  const cancel = () => { setAlt(image.alt); setCats(image.categories); setLink(image.link || ''); setEditing(false); };
 
   return (
     <div ref={setNodeRef} style={style} className="bg-[#0f1724] border border-white/10 rounded-xl overflow-hidden shadow-lg flex flex-col group/card">
@@ -117,6 +118,10 @@ function GalleryCard({ image, onDelete, onUpdate }: {
               <button onClick={addCustom} className="px-2 py-1 bg-white/10 hover:bg-white/20 text-white text-xs rounded transition-colors">Add</button>
             </div>
           </div>
+          <div>
+            <label className="text-[10px] text-white/50 block mb-1 uppercase tracking-wider">ArtStation Link</label>
+            <input value={link} onChange={e => setLink(e.target.value)} placeholder="https://www.artstation.com/..." className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-[#4a9eff]" />
+          </div>
           <div className="flex gap-2 pt-1">
             <button onClick={save} className="flex-1 flex items-center justify-center gap-1 bg-[#4a9eff] hover:bg-[#3b82f6] text-white px-3 py-1.5 rounded text-sm font-medium transition-colors">
               <Check size={14} /> Save
@@ -136,12 +141,13 @@ function GalleryCard({ image, onDelete, onUpdate }: {
 }
 
 // ── Gallery Upload Modal ───────────────────────────────────────────────────
-function GalleryUploadModal({ onClose, onDone }: { onClose: () => void; onDone: () => Promise<void> }) {
+function GalleryUploadModal({ onClose, onDone, token }: { onClose: () => void; onDone: () => Promise<void>; token: string }) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [alt, setAlt] = useState('');
   const [cats, setCats] = useState<string[]>([]);
   const [customCat, setCustomCat] = useState('');
+  const [link, setLink] = useState('');
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -160,7 +166,8 @@ function GalleryUploadModal({ onClose, onDone }: { onClose: () => void; onDone: 
     fd.append('image', file);
     fd.append('alt', alt);
     fd.append('categories', cats.join(','));
-    await fetch('/api/gallery-images', { method: 'POST', body: fd });
+    fd.append('link', link);
+    await fetch('/api/gallery-images', { method: 'POST', body: fd, headers: { 'Authorization': token } });
     await onDone(); // wait for gallery list to refresh BEFORE closing
     setUploading(false);
     onClose();
@@ -213,6 +220,10 @@ function GalleryUploadModal({ onClose, onDone }: { onClose: () => void; onDone: 
                 placeholder="Custom category…" className="flex-1 bg-white/5 border border-white/10 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-[#4a9eff]" />
               <button onClick={addCustom} className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white text-xs rounded transition-colors">Add</button>
             </div>
+          </div>
+          <div>
+            <label className="text-xs text-white/50 block mb-1">ArtStation Link</label>
+            <input value={link} onChange={e => setLink(e.target.value)} placeholder="https://www.artstation.com/..." className="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-[#4a9eff]" />
           </div>
           <button onClick={upload} disabled={!file || uploading}
             className="w-full flex items-center justify-center gap-2 bg-[#4a9eff] hover:bg-[#3b82f6] disabled:opacity-50 text-white py-2.5 rounded-lg font-medium transition-all mt-2">
@@ -380,7 +391,7 @@ function TeamCard({ member, onDelete, onUpdate }: {
 }
 
 // ── Team Upload Modal ─────────────────────────────────────────────────────────
-function TeamUploadModal({ onClose, onDone }: { onClose: () => void; onDone: () => Promise<void> }) {
+function TeamUploadModal({ onClose, onDone, token }: { onClose: () => void; onDone: () => Promise<void>; token: string }) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [name, setName] = useState('');
@@ -399,7 +410,7 @@ function TeamUploadModal({ onClose, onDone }: { onClose: () => void; onDone: () 
     fd.append('name', name);
     fd.append('role', role);
     fd.append('order', String(order));
-    await fetch('/api/team-members', { method: 'POST', body: fd });
+    await fetch('/api/team-members', { method: 'POST', body: fd, headers: { 'Authorization': token } });
     await onDone();
     setUploading(false);
     onClose();
@@ -566,7 +577,7 @@ function ShopCard({ item, onDelete, onUpdate }: {
 }
 
 // ── ArtStation Import Modal ────────────────────────────────────────
-function ArtStationImportModal({ onClose, onDone }: { onClose: () => void; onDone: () => Promise<void> }) {
+function ArtStationImportModal({ onClose, onDone, token }: { onClose: () => void; onDone: () => Promise<void>; token: string }) {
   const [url, setUrl] = useState('');
   const [fetching, setFetching] = useState(false);
   const [scraped, setScraped] = useState<{ name: string; price: string; description: string; filename: string; } | null>(null);
@@ -587,7 +598,7 @@ function ArtStationImportModal({ onClose, onDone }: { onClose: () => void; onDon
   const scrape = async () => {
     setFetching(true); setError(''); setScraped(null);
     try {
-      const res = await fetch('/api/scrape-artstation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) });
+      const res = await fetch('/api/scrape-artstation', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': token }, body: JSON.stringify({ url }) });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setScraped(data);
@@ -602,7 +613,7 @@ function ArtStationImportModal({ onClose, onDone }: { onClose: () => void; onDon
     setSaving(true);
     await fetch('/api/shop-items', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': token },
       body: JSON.stringify({ filename: scraped.filename, name, alt: scraped.description, categories: cats, price, link: url }),
     });
     await onDone();
@@ -680,8 +691,132 @@ function ArtStationImportModal({ onClose, onDone }: { onClose: () => void; onDon
   );
 }
 
+// ── Login Component ────────────────────────────────────────────────────────
+function Login({ onLogin }: { onLogin: (token: string) => void }) {
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
+      const data = await res.json();
+      if (data.success) {
+        localStorage.setItem('admin_token', data.token);
+        onLogin(data.token);
+        toast.success('Access granted');
+      } else {
+        toast.error(data.error || 'Invalid password');
+      }
+    } catch (err) {
+      toast.error('Connection failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-dark flex items-center justify-center px-4">
+      <div className="w-full max-w-md bg-[#1a1f2e] border border-white/10 rounded-2xl p-8 shadow-2xl">
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-16 h-16 bg-[#4a9eff]/10 rounded-full flex items-center justify-center mb-4 border border-[#4a9eff]/20">
+            <Lock className="text-[#4a9eff]" size={32} />
+          </div>
+          <h1 className="text-2xl font-bold font-['Graduate',_sans-serif] text-white">Admin Access</h1>
+          <p className="text-white/40 text-sm mt-1">Please enter your password to continue</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <input
+              type="password"
+              autoFocus
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-3.5 text-center text-xl tracking-[1em] text-white focus:outline-none focus:border-[#4a9eff] transition-all"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-[#4a9eff] hover:bg-[#3b82f6] disabled:opacity-50 text-white py-3.5 rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-2"
+          >
+            {loading ? <Loader2 className="animate-spin" size={20} /> : 'Unlock Dashboard'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export function AdminPanel() {
-  const [activeTab, setActiveTab] = useState<'hero' | 'gallery' | 'team' | 'shop'>('hero');
+  const [activeTab, setActiveTab] = useState<'hero' | 'gallery' | 'team' | 'shop' | 'settings'>('hero');
+  const [token, setToken] = useState<string | null>(localStorage.getItem('admin_token'));
+  const [isAuthed, setIsAuthed] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    const check = async () => {
+      if (!token) {
+        setAuthChecked(true);
+        return;
+      }
+      try {
+        const res = await fetch('/api/check-auth', {
+          headers: { 'Authorization': token }
+        });
+        if (res.ok) setIsAuthed(true);
+        else {
+          localStorage.removeItem('admin_token');
+          setToken(null);
+        }
+      } catch (e) {
+        console.error('Auth check failed:', e);
+      } finally {
+        setAuthChecked(true);
+      }
+    };
+    check();
+  }, [token]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('admin_token');
+    setToken(null);
+    setIsAuthed(false);
+    toast.info('Logged out');
+  };
+
+  const getHeaders = () => ({
+    'Content-Type': 'application/json',
+    'Authorization': token || ''
+  });
+
+  const changePassword = async (newPassword: string) => {
+    try {
+      const res = await fetch('/api/change-password', {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ newPassword })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setToken(data.token);
+        localStorage.setItem('admin_token', data.token);
+        toast.success('Password updated successfully');
+      } else {
+        toast.error(data.error || 'Failed to update password');
+      }
+    } catch (err) {
+      toast.error('Connection failed');
+    }
+  };
+
 
                 // Sensors for DND
                 const sensors = useSensors(
@@ -709,10 +844,12 @@ export function AdminPanel() {
   useEffect(() => {document.title = 'Admin Panel | DCS'; }, []);
   useEffect(() => {fetchHero(); fetchGallery(); fetchTeam(); fetchShop(); }, []);
 
-  const fetchHero = () => {fetch('/api/hero-images').then(r => r.json()).then(d => { if (Array.isArray(d)) setHeroImages(d); }); };
-  const fetchGallery = () => fetch('/api/gallery-images').then(r => r.json()).then(d => { if (Array.isArray(d)) setGalleryImages(d); });
-  const fetchTeam = () => fetch('/api/team-members').then(r => r.json()).then(d => { if (Array.isArray(d)) setTeamMembers(d); });
-  const fetchShop = () => fetch('/api/shop-items').then(r => r.json()).then(d => { if (Array.isArray(d)) setShopItems(d); });
+  useEffect(() => { if (isAuthed) { fetchHero(); fetchGallery(); fetchTeam(); fetchShop(); } }, [isAuthed, token]);
+
+  const fetchHero = () => { fetch('/api/hero-images', { headers: getHeaders() }).then(r => r.json()).then(d => { if (Array.isArray(d)) setHeroImages(d); }); };
+  const fetchGallery = () => fetch('/api/gallery-images', { headers: getHeaders() }).then(r => r.json()).then(d => { if (Array.isArray(d)) setGalleryImages(d); });
+  const fetchTeam = () => fetch('/api/team-members', { headers: getHeaders() }).then(r => r.json()).then(d => { if (Array.isArray(d)) setTeamMembers(d); });
+  const fetchShop = () => fetch('/api/shop-items', { headers: getHeaders() }).then(r => r.json()).then(d => { if (Array.isArray(d)) setShopItems(d); });
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const {active, over} = event;
@@ -725,7 +862,7 @@ export function AdminPanel() {
                   setHeroImages(newList);
                   // Persist all orders (could be optimized, but this is simple)
                   for (const img of newList) {
-                    await fetch('/api/hero-images', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: img.filename, order: img.order }) });
+                    await fetch('/api/hero-images', { method: 'PATCH', headers: getHeaders(), body: JSON.stringify({ filename: img.filename, order: img.order }) });
       }
     } else if (activeTab === 'gallery') {
       const oldIndex = galleryImages.findIndex(img => img.filename === active.id);
@@ -733,7 +870,7 @@ export function AdminPanel() {
       const newList = arrayMove(galleryImages, oldIndex, newIndex).map((img, i) => ({...img, order: i }));
                   setGalleryImages(newList);
                   for (const img of newList) {
-                    await fetch('/api/gallery-images', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: img.filename, order: img.order }) });
+                    await fetch('/api/gallery-images', { method: 'PATCH', headers: getHeaders(), body: JSON.stringify({ filename: img.filename, order: img.order }) });
       }
     } else if (activeTab === 'team') {
       const oldIndex = teamMembers.findIndex(m => m.filename === active.id);
@@ -741,7 +878,7 @@ export function AdminPanel() {
       const newList = arrayMove(teamMembers, oldIndex, newIndex).map((m, i) => ({...m, order: i }));
                   setTeamMembers(newList);
                   for (const m of newList) {
-                    await fetch('/api/team-members', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: m.filename, order: m.order }) });
+                    await fetch('/api/team-members', { method: 'PATCH', headers: getHeaders(), body: JSON.stringify({ filename: m.filename, order: m.order }) });
       }
     } else if (activeTab === 'shop') {
       const oldIndex = shopItems.findIndex(item => item.id === active.id);
@@ -749,7 +886,7 @@ export function AdminPanel() {
       const newList = arrayMove(shopItems, oldIndex, newIndex).map((item, i) => ({...item, order: i }));
                   setShopItems(newList);
                   for (const item of newList) {
-                    await fetch('/api/shop-items', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: item.id, order: item.order }) });
+                    await fetch('/api/shop-items', { method: 'PATCH', headers: getHeaders(), body: JSON.stringify({ id: item.id, order: item.order }) });
       }
     }
     toast.success('Order updated successfully');
@@ -759,79 +896,137 @@ export function AdminPanel() {
     const file = e.target.files?.[0]; if (!file) return;
                     setHeroUploading(true);
                     const fd = new FormData(); fd.append('image', file);
-                    await fetch('/api/hero-images', {method: 'POST', body: fd });
+                    await fetch('/api/hero-images', { method: 'POST', body: fd, headers: { 'Authorization': token || '' } });
                     await fetchHero(); setHeroUploading(false);
                     if (heroFileRef.current) heroFileRef.current.value = '';
   };
 
   const handleHeroDelete = async (filename: string) => {
     if (!confirm('Delete this image?')) return;
-                    await fetch(`/api/hero-images?file=${encodeURIComponent(filename)}`, {method: 'DELETE' });
+                    await fetch(`/api/hero-images?file=${encodeURIComponent(filename)}`, { method: 'DELETE', headers: getHeaders() });
                     fetchHero();
   };
 
   const handleHeroUpdate = async (filename: string, updates: Partial<HeroImage>) => {
-    await fetch('/api/hero-images', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename, ...updates }) });
+    await fetch('/api/hero-images', { method: 'PATCH', headers: getHeaders(), body: JSON.stringify({ filename, ...updates }) });
     fetchHero();
   };
 
   const handleGalleryDelete = async (filename: string) => {
     if (!confirm('Delete this image?')) return;
-                    await fetch(`/api/gallery-images?file=${encodeURIComponent(filename)}`, {method: 'DELETE' });
+                    await fetch(`/api/gallery-images?file=${encodeURIComponent(filename)}`, { method: 'DELETE', headers: getHeaders() });
                     fetchGallery();
   };
 
-  const handleGalleryUpdate = async (filename: string, alt: string, categories: string[]) => {
-                      await fetch('/api/gallery-images', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename, alt, categories }) });
+  const handleGalleryUpdate = async (filename: string, alt: string, categories: string[], link?: string) => {
+                      await fetch('/api/gallery-images', { method: 'PATCH', headers: getHeaders(), body: JSON.stringify({ filename, alt, categories, link }) });
                     fetchGallery();
   };
+
 
   const handleTeamDelete = async (filename: string) => {
     if (!confirm('Delete this member?')) return;
-                    await fetch(`/api/team-members?file=${encodeURIComponent(filename)}`, {method: 'DELETE' });
+                    await fetch(`/api/team-members?file=${encodeURIComponent(filename)}`, { method: 'DELETE', headers: getHeaders() });
                     fetchTeam();
   };
 
   const handleTeamUpdate = async (filename: string, name: string, role: string, order: number) => {
-                      await fetch('/api/team-members', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename, name, role, order }) });
+                      await fetch('/api/team-members', { method: 'PATCH', headers: getHeaders(), body: JSON.stringify({ filename, name, role, order }) });
                     fetchTeam();
   };
 
   const handleShopDelete = async (id: string) => {
     if (!confirm('Delete this item?')) return;
-                    await fetch(`/api/shop-items?id=${encodeURIComponent(id)}`, {method: 'DELETE' });
+                    await fetch(`/api/shop-items?id=${encodeURIComponent(id)}`, { method: 'DELETE', headers: getHeaders() });
                     fetchShop();
   };
 
+
                     const handleShopUpdate = async (id: string, updates: Partial<ShopItem>) => {
-                      await fetch('/api/shop-items', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, ...updates }) });
+                      await fetch('/api/shop-items', { method: 'PATCH', headers: getHeaders(), body: JSON.stringify({ id, ...updates }) });
                       fetchShop();
   };
 
-                      return (
-                      <div className="min-h-screen bg-dark text-white">
-                        {showGalleryModal && <GalleryUploadModal onClose={() => setShowGalleryModal(false)} onDone={fetchGallery} />}
-                        {showTeamModal && <TeamUploadModal onClose={() => setShowTeamModal(false)} onDone={fetchTeam} />}
-                        {showShopModal && <ArtStationImportModal onClose={() => setShowShopModal(false)} onDone={fetchShop} />}
 
-                        {/* Top Bar */}
-                        <div className="fixed top-0 left-0 right-0 z-40 bg-dark/95 backdrop-blur border-b border-white/10 px-6 py-4 flex items-center justify-between">
-                          <h1 className="text-xl font-bold font-['Graduate',_sans-serif]">Admin Dashboard</h1>
-                          <Link to="/" className="text-sm text-[#4a9eff] hover:text-white transition-colors">← Back to Site</Link>
-                        </div>
+                       if (!authChecked) return <div className="min-h-screen bg-dark flex items-center justify-center"><Loader2 className="text-[#4a9eff] animate-spin" size={40} /></div>;
+                       if (!isAuthed) return <Login onLogin={(t) => { setToken(t); setIsAuthed(true); }} />;
 
-                        <div className="pt-20 max-w-6xl mx-auto px-4 pb-16">
-                          {/* Tabs */}
-                          <div className="flex gap-1 mb-8 bg-white/5 rounded-xl p-1.5 w-fit">
-                            {([['hero', '🎠 Hero Carousel'], ['gallery', '🖼️ Gallery'], ['team', '👥 Team'], ['shop', '🛒 Shop']] as const).map(([tab, label]) => (
-                              <button key={tab} onClick={() => setActiveTab(tab as any)}
-                                className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === tab ? 'bg-[#4a9eff] text-white shadow' : 'text-white/50 hover:text-white'}`}>
-                                {label}
-                              </button>
-                            ))}
-                          </div>
+                       return (
+                       <div className="min-h-screen bg-dark text-white">
+                         {showGalleryModal && <GalleryUploadModal onClose={() => setShowGalleryModal(false)} onDone={fetchGallery} token={token || ''} />}
+                         {showTeamModal && <TeamUploadModal onClose={() => setShowTeamModal(false)} onDone={fetchTeam} token={token || ''} />}
+                         {showShopModal && <ArtStationImportModal onClose={() => setShowShopModal(false)} onDone={fetchShop} token={token || ''} />}
 
-                          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToWindowEdges]}>
+                         {/* Top Bar */}
+                         <div className="fixed top-0 left-0 right-0 z-40 bg-dark/95 backdrop-blur border-b border-white/10 px-6 py-4 flex items-center justify-between">
+                           <div className="flex items-center gap-4">
+                             <h1 className="text-xl font-bold font-['Graduate',_sans-serif]">Admin Dashboard</h1>
+                             <div className="h-4 w-px bg-white/10" />
+                             <button onClick={handleLogout} className="flex items-center gap-1.5 text-xs text-white/40 hover:text-red-400 transition-colors">
+                               <LogOut size={14} /> Logout
+                             </button>
+                           </div>
+                           <Link to="/" className="text-sm text-[#4a9eff] hover:text-white transition-colors">← Back to Site</Link>
+                         </div>
+
+                         <div className="pt-20 max-w-6xl mx-auto px-4 pb-16">
+                           {/* Tabs */}
+                           <div className="flex gap-1 mb-8 bg-white/5 rounded-xl p-1.5 w-fit">
+                             {([['hero', '🎠 Hero'], ['gallery', '🖼️ Gallery'], ['team', '👥 Team'], ['shop', '🛒 Shop']] as const).map(([tab, label]) => (
+                               <button key={tab} onClick={() => setActiveTab(tab as any)}
+                                 className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === tab ? 'bg-[#4a9eff] text-white shadow' : 'text-white/50 hover:text-white'}`}>
+                                 {label}
+                               </button>
+                             ))}
+                             <button
+                               onClick={() => setActiveTab('settings')}
+                               className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'settings' ? 'bg-[#4a9eff] text-white shadow' : 'text-white/50 hover:text-white'}`}
+                             >
+                               ⚙️ Settings
+                             </button>
+                           </div>
+
+                           {activeTab === 'settings' && (
+                             <div className="bg-[#1a1f2e] border border-white/10 rounded-xl p-8 shadow-2xl max-w-md mx-auto">
+                               <div className="flex items-center gap-3 mb-6">
+                                 <Shield className="text-[#4a9eff]" size={24} />
+                                 <h2 className="text-xl font-bold">Security Settings</h2>
+                               </div>
+                               <p className="text-white/40 text-sm mb-6">Update your admin panel password. The new password will take effect immediately.</p>
+                               
+                               <div className="space-y-4">
+                                 <div>
+                                   <label className="text-xs text-white/50 block mb-2 uppercase tracking-wider font-semibold">New Password</label>
+                                   <div className="relative">
+                                     <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20" size={16} />
+                                     <input 
+                                       type="password"
+                                       id="newPassword"
+                                       placeholder="Enter new password"
+                                       className="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:border-[#4a9eff] transition-all"
+                                     />
+                                   </div>
+                                 </div>
+                                 <button 
+                                   onClick={() => {
+                                     const input = document.getElementById('newPassword') as HTMLInputElement;
+                                     if (input.value) {
+                                       changePassword(input.value);
+                                       input.value = '';
+                                     } else {
+                                       toast.error('Please enter a password');
+                                     }
+                                   }}
+                                   className="w-full bg-[#4a9eff] hover:bg-[#3b82f6] text-white py-3 rounded-xl font-bold transition-all"
+                                 >
+                                   Update Password
+                                 </button>
+                               </div>
+                             </div>
+                           )}
+
+                           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToWindowEdges]}>
+
                             {/* Hero Tab */}
                             {activeTab === 'hero' && (
                               <div className="bg-[#1a1f2e] border border-white/10 rounded-xl p-6 shadow-2xl">

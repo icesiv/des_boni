@@ -6,6 +6,7 @@ interface GalleryImage {
   src: string;
   alt: string;
   categories: string[];
+  link?: string;
 }
 
 // ── Lightbox ────────────────────────────────────────────────────────────────
@@ -224,14 +225,28 @@ export function Gallery() {
                     {/* Hover Overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-[#1a1f2e]/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-                    {/* View Icon */}
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                    {/* Hover Icons Container */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                      {/* View Icon (Lightbox) */}
                       <div
-                        className="w-14 h-14 rounded-full bg-[#4a9eff]/90 flex items-center justify-center transform scale-0 group-hover:scale-100 transition-transform duration-300"
+                        className="w-12 h-12 rounded-full bg-white/10 hover:bg-[#4a9eff] backdrop-blur-md flex items-center justify-center transform scale-0 group-hover:scale-100 transition-all duration-300 border border-white/20 hover:border-[#4a9eff]"
                         style={{ transitionTimingFunction: 'cubic-bezier(0.68, -0.55, 0.265, 1.55)' }}
                       >
-                        <Eye className="w-6 h-6 text-white" />
+                        <Eye className="w-5 h-5 text-white" />
                       </div>
+
+                      {/* ArtStation Link */}
+                      {image.link && (
+                        <a
+                          href={image.link.startsWith('http') ? image.link : `https://${image.link}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-2 px-4 py-2 bg-black/60 hover:bg-[#4a9eff] backdrop-blur-md text-white rounded-full text-[10px] font-bold tracking-widest uppercase transform translate-y-4 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-500 border border-white/10 hover:border-[#4a9eff]"
+                        >
+                          ArtStation
+                        </a>
+                      )}
                     </div>
 
                     <div className="absolute inset-0 border-2 border-transparent group-hover:border-[#4a9eff] transition-all duration-300 pointer-events-none" />

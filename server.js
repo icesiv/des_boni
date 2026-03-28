@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import formidable from 'formidable';
 import { fileURLToPath } from 'url';
+import crypto from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,6 +52,53 @@ function extractMeta(html, property) {
     const re2 = new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${property}["']`, 'i');
     return (html.match(re) || html.match(re2) || [])[1] || '';
 }
+
+// ── Admin Auth ──────────────────────────────────────────────────────────────
+const AUTH_DIR = path.join(__dirname, 'public/assets/admin');
+const AUTH_FILE = path.join(AUTH_DIR, 'auth-meta.json');
+const DEFAULT_PASS = "1111";
+
+if (!fs.existsSync(AUTH_DIR)) fs.mkdirSync(AUTH_DIR, { recursive: true });
+const getHash = (p) => crypto.createHash('sha256').update(p).digest('hex');
+
+const readAuth = () => {
+    if (!fs.existsSync(AUTH_FILE)) {
+        const initial = { passwordHash: getHash(DEFAULT_PASS) };
+        fs.writeFileSync(AUTH_FILE, JSON.stringify(initial, null, 2));
+        return initial;
+    }
+    return JSON.parse(fs.readFileSync(AUTH_FILE, 'utf-8'));
+};
+
+app.post('/api/login', (req, res) => {
+    const { password } = req.body;
+    const auth = readAuth();
+    if (getHash(password) === auth.passwordHash) {
+        return res.json({ success: true, token: auth.passwordHash });
+    }
+    res.status(401).json({ error: 'Invalid password' });
+});
+
+app.get('/api/check-auth', (req, res) => {
+    const token = req.headers['authorization'];
+    const auth = readAuth();
+    if (token === auth.passwordHash) return res.json({ success: true });
+    res.status(401).json({ error: 'Unauthorized' });
+});
+
+app.post('/api/change-password', (req, res) => {
+    const token = req.headers['authorization'];
+    const auth = readAuth();
+    if (token !== auth.passwordHash) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { newPassword } = req.body;
+    if (!newPassword) return res.status(400).json({ error: 'Password required' });
+
+    const newHash = getHash(newPassword);
+    fs.writeFileSync(AUTH_FILE, JSON.stringify({ passwordHash: newHash }, null, 2));
+    res.json({ success: true, token: newHash });
+});
+
 
 app.post('/api/scrape-artstation', async (req, res) => {
     const { url } = req.body;
@@ -219,17 +267,28 @@ app.post('/api/gallery-images', (req, res) => {
         const upl = Array.isArray(files.image) ? files.image[0] : files.image;
         const filename = path.basename(upl.filepath || upl.newFilename);
         const meta = readG();
-        meta.push({ filename, alt: getFormField(fields, 'alt') || filename, categories: (getFormField(fields, 'categories') || '').split(',').map(c => c.trim()).filter(Boolean) });
+        const maxOrder = meta.reduce((max, m) => Math.max(max, m.order || 0), -1);
+        meta.push({ 
+            filename, 
+            alt: getFormField(fields, 'alt') || filename, 
+            categories: (getFormField(fields, 'categories') || '').split(',').map(c => c.trim()).filter(Boolean),
+            order: maxOrder + 1,
+            link: getFormField(fields, 'link')
+        });
         writeG(meta);
-        res.json({ success: true });
+        res.json({ success: true, filename });
     });
 });
 app.patch('/api/gallery-images', (req, res) => {
-    const { filename, alt, categories } = req.body;
+    const { filename, alt, categories, order, link } = req.body;
     const meta = readG();
     const idx = meta.findIndex(m => m.filename === filename);
     if (idx === -1) return res.status(404).json({ error: 'Not found' });
-    meta[idx] = { ...meta[idx], alt: alt ?? meta[idx].alt, categories: categories ?? meta[idx].categories };
+    if (alt !== undefined) meta[idx].alt = alt;
+    if (categories !== undefined) meta[idx].categories = categories;
+    if (order !== undefined) meta[idx].order = order;
+    if (link !== undefined) meta[idx].link = link;
+    meta.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     writeG(meta);
     res.json({ success: true });
 });

@@ -107,7 +107,12 @@ export function HeroCarousel() {
                       />
                       {/* Foreground Fitted Image - Wrappable in link */}
                       {image.link ? (
-                        <a href={image.link} target="_blank" rel="noopener noreferrer" className="absolute z-10 top-0 left-1/2 -translate-x-1/2 w-full h-full md:w-auto md:h-full md:max-w-none block hover:brightness-110 transition-all">
+                        <a
+                          href={image.link.startsWith('http') ? image.link : `https://${image.link}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="absolute z-10 top-0 left-1/2 -translate-x-1/2 w-full h-full md:w-auto md:h-full md:max-w-none block hover:brightness-110 transition-all"
+                        >
                           <img
                             src={image.src}
                             alt={image.alt}
