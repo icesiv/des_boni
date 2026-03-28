@@ -80,9 +80,7 @@ function Lightbox({ images, index, onClose }: {
             ))}
           </div>
         )}
-        {loaded && (
-          <p className="absolute -bottom-7 left-0 right-0 text-center text-white/50 text-xs">{img.alt}</p>
-        )}
+
       </div>
 
       {/* Next */}

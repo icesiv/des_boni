@@ -53,19 +53,14 @@ export function HeroCarousel() {
 
   return (
     <section
-      className="relative w-full pt-[70px]"
+      className="relative w-full pt-[70px] pb-6 bg-dark "
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
       <div className="max-w-7xl mx-auto">
         {/* Carousel Container with 3D perspective */}
-        {/* 
-         Changed from h-[65vh] to:
-         - Mobile: min-h-[calc(100vh-70px)] (Full screen height minus parent padding)
-         - Desktop (md+): aspect-video (16:9 ratio)
-      */}
         <div
-          className="relative overflow-hidden bg-dark h-[calc(100vh-70px)] md:min-h-0 md:h-auto md:aspect-video [perspective:1000px]"
+          className="relative bg-dark h-[calc(100vh-70px)] md:min-h-0 md:h-auto md:aspect-video [perspective:1000px]"
         >
           {loading ? (
             <div className="absolute inset-0 flex items-center justify-center">
@@ -79,7 +74,7 @@ export function HeroCarousel() {
             </div>
           ) : (
             <>
-              <div className="relative w-full h-full">
+              <div className="relative overflow-hidden w-full h-full">
                 {heroImages.map((image, index) => {
                   const isActive = index === currentSlide;
                   const isPrev = index === (currentSlide - 1 + heroImages.length) % heroImages.length;
@@ -156,7 +151,7 @@ export function HeroCarousel() {
               </button>
 
               {/* Dot Indicators */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex gap-2">
+              <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 z-30 flex gap-2">
                 {heroImages.map((_, index) => (
                   <button
                     key={index}
