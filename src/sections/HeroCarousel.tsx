@@ -60,7 +60,7 @@ export function HeroCarousel() {
       <div className="max-w-7xl mx-auto">
         {/* Carousel Container with 3D perspective */}
         <div
-          className="relative bg-dark h-[calc(100vh-70px)] md:min-h-0 md:h-auto md:aspect-video [perspective:1000px]"
+          className="relative bg-dark h-[65vh] md:min-h-0 md:h-auto md:aspect-video [perspective:1000px]"
         >
           {loading ? (
             <div className="absolute inset-0 flex items-center justify-center">
@@ -116,14 +116,14 @@ export function HeroCarousel() {
                           <img
                             src={image.src}
                             alt={image.alt}
-                            className="w-full h-full object-contain md:w-auto md:h-full md:max-w-none"
+                            className="w-full h-full object-cover md:object-contain md:w-auto md:h-full md:max-w-none"
                           />
                         </a>
                       ) : (
                         <img
                           src={image.src}
                           alt={image.alt}
-                          className="absolute z-10 top-0 left-1/2 -translate-x-1/2 w-full h-full object-contain md:w-auto md:h-full md:max-w-none"
+                          className="absolute z-10 top-0 left-1/2 -translate-x-1/2 w-full h-full object-cover md:object-contain md:w-auto md:h-full md:max-w-none"
                         />
                       )}
                       {/* Subtle gradient overlay */}

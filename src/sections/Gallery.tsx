@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Eye, Loader2, X, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { Eye, Loader2, X, ChevronLeft, ChevronRight, Plus, ChevronDown } from 'lucide-react';
 
 interface GalleryImage {
   filename: string;
@@ -108,6 +108,7 @@ export function Gallery() {
 
   // State to track how many images to show
   const [visibleCount, setVisibleCount] = useState(6);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const sectionRef = useRef<HTMLElement>(null);
 
@@ -174,25 +175,61 @@ export function Gallery() {
           </div>
         ) : (
           <>
-            {/* Category Tabs */}
-            <div className="flex flex-wrap px-8 lg:px-10">
-              {['ALL', ...categories].map((category) => (
+            {/* Category Filter - Responsive */}
+            <div className="px-8 lg:px-10 relative z-30">
+              {/* Desktop Tabs */}
+              <div className="hidden md:flex flex-wrap">
+                {['ALL', ...categories].map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => setActiveCategory(category)}
+                    className={`relative px-8 pr-10 py-2 font-semibold transition-all duration-300 ${activeCategory === category
+                      ? 'bg-[#202938] text-white'
+                      : 'text-[#a0aec0] hover:text-white hover:bg-[#202938]/60'}`}
+                    style={{ clipPath: 'polygon(0 0, calc(100% - 24px) 0, 100% 100%, 0 100%)' }}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+
+              {/* Mobile Dropdown */}
+              <div className="md:hidden">
                 <button
-                  key={category}
-                  onClick={() => setActiveCategory(category)}
-                  className={`relative px-8 pr-10 py-2 font-semibold transition-all duration-300 ${activeCategory === category
-                    ? 'bg-[#202938] text-white'
-                    : 'text-[#a0aec0] hover:text-white hover:bg-[#202938]/60'}`}
-                  style={{ clipPath: 'polygon(0 0, calc(100% - 24px) 0, 100% 100%, 0 100%)' }}
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="w-full flex items-center justify-between bg-[#202938] text-white px-6 py-3 font-semibold rounded-t-lg border-b border-white/10"
                 >
-                  {category}
+                  <span className="flex items-center gap-2">
+                    <span className="text-[#4a9eff] text-xs uppercase tracking-widest font-bold">Category:</span>
+                    {activeCategory}
+                  </span>
+                  <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
-              ))}
+
+                {isDropdownOpen && (
+                  <div className="absolute left-8 right-8 top-full bg-[#1a1f2e] border border-white/10 rounded-b-lg shadow-2xl overflow-hidden transition-all duration-300">
+                    {['ALL', ...categories].map((category) => (
+                      <button
+                        key={category}
+                        onClick={() => {
+                          setActiveCategory(category);
+                          setIsDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-6 py-3 transition-colors ${activeCategory === category
+                          ? 'bg-[#4a9eff] text-white font-bold'
+                          : 'text-[#a0aec0] hover:bg-white/5 hover:text-white'}`}
+                      >
+                        {category}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Content Wrapper for Background consistency */}
-            <div className="bg-[#202938] pt-4 lg:pt-8 pb-8 lg:pb-10 px-8 lg:px-10">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" style={{ perspective: '1000px' }}>
+            <div className="bg-[#202938] pt-4 lg:pt-8 pb-8 lg:pb-10 px-4 sm:px-8 lg:px-10">
+              <div className="grid grid-cols-2 lg:grid-cols-3" style={{ perspective: '1000px' }}>
                 {visibleImages.map((image, index) => (
                   <div
                     key={image.filename}

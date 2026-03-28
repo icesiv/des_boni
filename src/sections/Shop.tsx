@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Eye, ShoppingCart, Loader2, X, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { Eye, ShoppingCart, Loader2, X, ChevronLeft, ChevronRight, Plus, ChevronDown } from 'lucide-react';
 
 interface ShopItem {
   id: string;
@@ -170,6 +170,7 @@ export function Shop() {
 
   // State to track how many items to show
   const [visibleCount, setVisibleCount] = useState(6);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   useEffect(() => {
     fetch('/api/shop-items')
@@ -224,20 +225,56 @@ export function Shop() {
           </div>
         ) : (
           <>
-            {/* Category Tabs */}
-            <div className="flex flex-wrap px-8 lg:px-10">
-              {['ALL', ...categories].map(cat => (
-                <button key={cat} onClick={() => setActiveCategory(cat)}
-                  className={`relative px-8 pr-10 py-2 font-semibold transition-all duration-300 ${activeCategory === cat ? 'bg-lite text-white' : 'text-[#a0aec0] hover:text-white hover:bg-lite/60'}`}
-                  style={{ clipPath: 'polygon(0 0, calc(100% - 24px) 0, 100% 100%, 0 100%)' }}>
-                  {cat}
+            {/* Category Filter - Responsive */}
+            <div className="px-8 lg:px-10 relative z-30 bg-dark">
+              {/* Desktop Tabs */}
+              <div className="hidden md:flex flex-wrap">
+                {['ALL', ...categories].map(cat => (
+                  <button key={cat} onClick={() => setActiveCategory(cat)}
+                    className={`relative px-8 pr-10 py-2 font-semibold transition-all duration-300 ${activeCategory === cat ? 'bg-lite text-white' : 'text-[#a0aec0] hover:text-white hover:bg-lite/60'}`}
+                    style={{ clipPath: 'polygon(0 0, calc(100% - 24px) 0, 100% 100%, 0 100%)' }}>
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              {/* Mobile Dropdown */}
+              <div className="md:hidden">
+                <button
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="w-full flex items-center justify-between bg-lite text-white px-6 py-3 font-semibold rounded-t-lg border-b border-white/10"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="text-[#4a9eff] text-xs uppercase tracking-widest font-bold">Category:</span>
+                    {activeCategory}
+                  </span>
+                  <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
-              ))}
+
+                {isDropdownOpen && (
+                  <div className="absolute left-8 right-8 top-full bg-[#1a2233] border border-white/10 rounded-b-lg shadow-2xl overflow-hidden transition-all duration-300">
+                    {['ALL', ...categories].map(cat => (
+                      <button
+                        key={cat}
+                        onClick={() => {
+                          setActiveCategory(cat);
+                          setIsDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-6 py-3 transition-colors ${activeCategory === cat
+                          ? 'bg-[#4a9eff] text-white font-bold'
+                          : 'text-[#a0aec0] hover:bg-white/5 hover:text-white'}`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Content Wrapper for Background consistency */}
-            <div className="bg-lite pt-4 lg:pt-8 pb-8 lg:pb-10 px-8 lg:px-10">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" style={{ perspective: '1000px' }}>
+            <div className="bg-lite pt-4 lg:pt-8 pb-8 lg:pb-10 px-4 sm:px-8 lg:px-10">
+              <div className="grid grid-cols-2 lg:grid-cols-3" style={{ perspective: '1000px' }}>
                 {visibleItems.map((item, index) => (
                   <div key={item.id} onClick={() => setLightboxIndex(index)}
                     className={`group bg-black p-1 relative overflow-hidden cursor-pointer transition-all duration-700 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
