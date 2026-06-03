@@ -101,7 +101,7 @@ export function NewHome() {
     link?: string;
   }
   const [galleryItems, setGalleryItems] = useState<HomeGalleryImage[]>([]);
-  const [galleryCategories, setGalleryCategories] = useState<{id: string, label: string}[]>([{ id: 'all', label: 'All' }]);
+  const [galleryCategories, setGalleryCategories] = useState<{ id: string, label: string }[]>([{ id: 'all', label: 'All' }]);
 
   useEffect(() => {
     fetch('/api/gallery-images')
@@ -117,7 +117,7 @@ export function NewHome() {
             link: img.link
           }));
           setGalleryItems(items);
-          
+
           const uniqueCats = Array.from(new Set(data.flatMap((img: any) => img.categories || [])));
           const catFilters = [
             { id: 'all', label: 'All' },
@@ -133,6 +133,52 @@ export function NewHome() {
   }, []);
 
   const filteredGallery = galleryItems.filter(item => activeFilter === 'all' || item.categories.includes(activeFilter));
+
+  interface HomeShopItem {
+    id: string;
+    category: string;
+    src: string;
+    title: string;
+    price: string;
+    link?: string;
+    desc: string;
+  }
+  const [shopItems, setShopItems] = useState<HomeShopItem[]>([]);
+
+  useEffect(() => {
+    fetch('/api/shop-items')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const items: HomeShopItem[] = data.map((item: any, idx: number) => ({
+            id: item.id || String(idx),
+            category: item.category || 'Uncategorized',
+            src: item.src,
+            title: item.name || 'Untitled',
+            price: item.price || '$0.00',
+            link: item.link,
+            desc: item.alt || ''
+          }));
+          setShopItems(items);
+        }
+      })
+      .catch(err => console.error('Failed to load shop items:', err));
+  }, []);
+
+  interface HomeTeamMember {
+    filename: string;
+    src: string;
+    name: string;
+    role: string;
+  }
+  const [teamMembers, setTeamMembers] = useState<HomeTeamMember[]>([]);
+
+  useEffect(() => {
+    fetch('/api/team-members')
+      .then(res => res.json())
+      .then(data => { if (Array.isArray(data)) setTeamMembers(data); })
+      .catch(err => console.error('Failed to load team members:', err));
+  }, []);
 
   return (
     <div className="bg-[#050505] text-zinc-100 overflow-x-hidden min-h-screen font-sans">
@@ -182,12 +228,15 @@ export function NewHome() {
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 glass-panel">
         <div className="max-w-7xl mx-auto px-6 md:px-12 py-4 flex items-center justify-between">
-          <a href="#hero" className="flex items-center gap-3 group">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
-              <Box className="w-4 h-4 text-white" />
+          <a href="#hero" className="flex items-center gap-4 group">
+            <div className="relative transition-all duration-300 group-hover:scale-110 w-12 h-12">
+              <img src="assets/logo/dcs-logo-128.png" alt="DCS Logo" className="w-full h-full object-contain" />
             </div>
-            <span className="text-sm font-semibold tracking-tight">
-              STUDIO<span className="text-orange-500">3D</span>
+            <span
+              style={{ fontFamily: '"Graduate", sans-serif' }}
+              className="font-extrabold text-white text-sm md:text-base transition-all duration-300"
+            >
+              DYNAMIC CREATIVE STUDIOS
             </span>
           </a>
           <div className="hidden md:flex items-center gap-8">
@@ -246,7 +295,7 @@ export function NewHome() {
         <div className="absolute top-1/3 left-1/2 w-1 h-1 bg-zinc-500 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
 
         <div className="max-w-7xl mx-auto px-6 md:px-12 w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10 mt-10">
-          
+
           {/* Left: Text Content */}
           <div className="text-left">
             <div className="fade-in-up">
@@ -289,19 +338,19 @@ export function NewHome() {
           <div className="relative w-full h-[400px] sm:h-[500px] lg:h-[650px] fade-in-up delay-400 group">
             {/* Ambient glow behind the model */}
             <div className="absolute inset-0 bg-orange-500/10 blur-[100px] rounded-full mix-blend-screen pointer-events-none transition-opacity duration-700 group-hover:bg-orange-500/20"></div>
-            
+
             <div className="relative w-full h-full glass-card rounded-2xl overflow-hidden border border-zinc-800/50 shadow-2xl shadow-orange-900/10 glow-orange">
               {/* 
                 Spider-bot PENI PARKER: THE FRESHMAN
                 Parameters used: transparent=1 (removes background), autostart=1, ui_theme=dark
                 NOTE: Sketchfab forces UI on free accounts. We use CSS cropping to hide the top/bottom UI bars.
               */}
-              <iframe 
-                title="Spider-bot PENI PARKER: THE FRESHMAN" 
-                className="absolute top-[-70px] left-[-2px] w-[calc(100%+4px)] h-[calc(100%+140px)]" 
-                src="https://sketchfab.com/models/ebc5906ea6724549bd4aa65a9ed87bf1/embed?autostart=1&transparent=1&ui_theme=dark&ui_infos=0&ui_watermark=0&ui_controls=0&ui_stop=0&ui_hint=0" 
-                frameBorder="0" 
-                allow="autoplay; fullscreen; xr-spatial-tracking" 
+              <iframe
+                title="Spider-bot PENI PARKER: THE FRESHMAN"
+                className="absolute top-[-70px] left-[-2px] w-[calc(100%+4px)] h-[calc(100%+140px)]"
+                src="https://sketchfab.com/models/ebc5906ea6724549bd4aa65a9ed87bf1/embed?autostart=1&transparent=1&ui_theme=dark&ui_infos=0&ui_watermark=0&ui_controls=0&ui_stop=0&ui_hint=0"
+                frameBorder="0"
+                allow="autoplay; fullscreen; xr-spatial-tracking"
                 allowFullScreen
               ></iframe>
             </div>
@@ -356,11 +405,10 @@ export function NewHome() {
               <button
                 key={filter.id}
                 onClick={() => setActiveFilter(filter.id)}
-                className={`filter-btn text-xs font-medium px-4 py-2 rounded-full border transition-all duration-150 ${
-                  activeFilter === filter.id 
-                    ? 'border-orange-500/40 text-orange-400 bg-orange-500/5' 
-                    : 'border-zinc-700 text-zinc-400 hover:border-orange-500/40 hover:text-orange-400'
-                }`}
+                className={`filter-btn text-xs font-medium px-4 py-2 rounded-full border transition-all duration-150 ${activeFilter === filter.id
+                  ? 'border-orange-500/40 text-orange-400 bg-orange-500/5'
+                  : 'border-zinc-700 text-zinc-400 hover:border-orange-500/40 hover:text-orange-400'
+                  }`}
               >
                 {filter.label}
               </button>
@@ -370,7 +418,7 @@ export function NewHome() {
           {/* Gallery Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 transition-opacity duration-300">
             {filteredGallery.map((item, index) => (
-              <div 
+              <div
                 key={item.id}
                 className="portfolio-item fade-in-up group cursor-pointer rounded-xl overflow-hidden relative border border-zinc-800/50"
                 style={{ animationDelay: `${index * 0.1}s` }}
@@ -406,22 +454,17 @@ export function NewHome() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-12">
-            {[
-              { cat: 'Brushes', title: 'ZBrush Skin Alpha Pack', price: '$14.99', desc: '50+ alphas', img: 'https://picsum.photos/seed/brushpack/400/400.jpg' },
-              { cat: 'Base Mesh', title: 'Stylized Character Base', price: '$24.99', desc: 'FBX + OBJ', img: 'https://picsum.photos/seed/characterbase/400/400.jpg' },
-              { cat: 'Kit', title: 'Medieval Armor Kit', price: '$39.99', desc: '80+ pieces', img: 'https://picsum.photos/seed/armorset/400/400.jpg' },
-              { cat: 'Base Mesh', title: 'Quadruped Creature Base', price: '$19.99', desc: 'ZTL + FBX', img: 'https://picsum.photos/seed/creaturebase/400/400.jpg' }
-            ].map((product, i) => (
-              <div key={i} className="store-badge glass-card rounded-xl overflow-hidden border border-zinc-800/50 group cursor-pointer">
-                <div className="aspect-square overflow-hidden">
-                  <img src={product.img} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            {shopItems.slice(0, 4).map((product) => (
+              <div key={product.id} onClick={() => product.link && window.open(product.link, '_blank')} className="store-badge glass-card rounded-xl overflow-hidden border border-zinc-800/50 group cursor-pointer">
+                <div className="aspect-square overflow-hidden bg-zinc-900/50">
+                  <img src={product.src} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 </div>
                 <div className="p-4">
-                  <span className="text-[10px] uppercase tracking-widest text-orange-400">{product.cat}</span>
+                  <span className="text-[10px] uppercase tracking-widest text-orange-400">{product.category}</span>
                   <h3 className="text-sm font-medium text-zinc-100 mt-1">{product.title}</h3>
                   <div className="flex items-center justify-between mt-3">
                     <span className="text-orange-400 font-semibold text-sm">{product.price}</span>
-                    <span className="text-[10px] text-zinc-500">{product.desc}</span>
+                    <span className="text-[10px] text-zinc-500 truncate max-w-[100px]" title={product.desc}>{product.desc}</span>
                   </div>
                 </div>
               </div>
@@ -430,7 +473,7 @@ export function NewHome() {
 
           <div className="text-center">
             <a
-              href="https://www.artstation.com"
+              href="https://bony.artstation.com/store"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-3 bg-gradient-to-b from-orange-500 to-orange-600 text-white text-sm font-medium px-10 py-4 rounded-full hover:from-orange-400 hover:to-orange-500 transition-all duration-150 shadow-lg shadow-orange-900/20 glow-orange"
@@ -439,7 +482,7 @@ export function NewHome() {
               Browse Full Store on ArtStation
               <ArrowRight className="w-4 h-4" />
             </a>
-            <p className="text-xs text-zinc-600 mt-4">40+ products · Instant download · Commercial license included</p>
+            <p className="text-xs text-zinc-600 mt-4">Instant download · Commercial license included</p>
           </div>
         </div>
       </section>
@@ -448,21 +491,33 @@ export function NewHome() {
       <section id="about" className="py-24 border-t border-zinc-800/50" ref={el => sectionsRef.current[2] = el}>
         <div className="max-w-7xl mx-auto px-6 md:px-12">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <div className="relative">
-              <div className="rounded-2xl overflow-hidden border border-zinc-800/50 glow-orange">
-                <img src="https://picsum.photos/seed/artistportrait/700/900.jpg" alt="Artist at work" className="w-full object-cover aspect-[3/4]" />
-              </div>
-              <div className="absolute -bottom-5 -right-5 glass-card rounded-xl p-4 border border-zinc-800/50">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
-                    <Trophy className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <div className="text-xs text-zinc-400">ArtStation</div>
-                    <div className="text-sm font-medium text-white">Top Staff Pick ×12</div>
+            <div className="relative flex flex-wrap justify-center gap-x-8 gap-y-12">
+              {teamMembers.map((member, index) => (
+                <div
+                  key={member.filename}
+                  className="group relative fade-in-up w-[40%] sm:w-[45%] flex justify-center"
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                >
+                  <div className="flex flex-col items-center">
+                    <div className="relative w-32 h-32 sm:w-48 sm:h-48 lg:w-56 lg:h-56 rounded-full overflow-hidden border-2 border-zinc-800 group-hover:border-orange-500 transition-all duration-500 group-hover:shadow-[0_0_30px_rgba(249,115,22,0.2)]">
+                      <img
+                        src={member.src}
+                        alt={member.name}
+                        className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500 group-hover:scale-110"
+                      />
+                    </div>
+                    <div className="mt-4 text-center">
+                      <h3 className="text-white font-semibold text-sm sm:text-base tracking-wide group-hover:text-orange-400 transition-colors duration-300">
+                        {member.name}
+                      </h3>
+                      <p className="text-zinc-500 text-xs sm:text-sm mt-1 relative inline-block">
+                        {member.role}
+                        <span className="absolute -bottom-1 left-1/2 w-0 h-0.5 bg-orange-500 transition-all duration-300 group-hover:w-full group-hover:left-0" />
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ))}
             </div>
 
             <div>
@@ -470,11 +525,12 @@ export function NewHome() {
                 <span className="w-8 h-px bg-orange-500"></span>
                 About
               </span>
-              <h2 className="text-3xl md:text-5xl font-medium tracking-tighter text-gradient mb-6">The Artist</h2>
+              <h2 className="text-3xl md:text-5xl font-medium tracking-tighter text-gradient mb-2">DCS</h2>
+              <h2 className="text-sm md:text-xs uppercase tracking-tighter text-gradient mb-6">DYNAMIC CREATIVE STUDIOS</h2>
               <div className="space-y-4 text-zinc-400 leading-relaxed">
-                <p>I'm a 3D character artist with over 8 years of experience in the game and collectibles industry. I specialize in high-poly sculpting, real-time character pipelines, and creating production-ready assets for AAA and indie studios.</p>
-                <p>My work spans fantasy, sci-fi, and stylized art directions. I'm passionate about anatomy, storytelling through design, and pushing the boundaries of what characters can convey in interactive media.</p>
-                <p>When I'm not crafting characters for studios, I create resources for the 3D community — brushes, base meshes, and full asset kits available through my ArtStation store.</p>
+                <p>We are a premier 3D character art studio bringing over eight years of industry expertise to the gaming and collectibles sectors. Our team specializes in high-fidelity sculpting, optimized real-time character pipelines, and the seamless delivery of production-ready assets for both AAA and independent studios.</p>
+                <p>Our comprehensive portfolio encompasses diverse art directions, ranging from grounded sci-fi and high fantasy to highly stylized aesthetics. Our design philosophy is rooted in a rigorous understanding of anatomy and visual storytelling, allowing us to consistently push the technical and narrative boundaries of character art in interactive media.</p>
+                <p>Beyond our core client services, we are committed to advancing the global 3D art community. We engineer and distribute professional-grade production resources—including proprietary brushes, foundational base meshes, and comprehensive asset kits—accessible via our studio’s ArtStation storefront.</p>
               </div>
 
               <div className="mt-8 flex flex-wrap gap-3">
@@ -488,7 +544,7 @@ export function NewHome() {
                   Get in Touch
                   <ArrowRight className="w-4 h-4" />
                 </a>
-                <a href="https://www.artstation.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 hover:text-orange-400 transition-colors duration-150">
+                <a href="https://bony.artstation.com/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 hover:text-orange-400 transition-colors duration-150">
                   <ExternalLink className="w-4 h-4" />
                   ArtStation Profile
                 </a>
@@ -606,11 +662,16 @@ export function NewHome() {
       <footer className="border-t border-zinc-800/50 py-12">
         <div className="max-w-7xl mx-auto px-6 md:px-12">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-3">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
-                <Box className="w-3.5 h-3.5 text-white" />
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 relative">
+                <img src="assets/logo/dcs-logo-128.png" alt="DCS Logo" className="w-full h-full object-contain" />
               </div>
-              <span className="text-sm font-semibold tracking-tight">STUDIO<span className="text-orange-500">3D</span></span>
+              <span
+                style={{ fontFamily: '"Graduate", sans-serif' }}
+                className="text-sm font-extrabold text-white tracking-tight"
+              >
+                DYNAMIC CREATIVE STUDIOS
+              </span>
             </div>
 
             <div className="flex items-center gap-6">
@@ -638,12 +699,12 @@ export function NewHome() {
 
       {/* Lightbox */}
       {lightboxData && (
-        <div 
+        <div
           className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4"
           onClick={() => setLightboxData(null)}
         >
-          <button 
-            onClick={() => setLightboxData(null)} 
+          <button
+            onClick={() => setLightboxData(null)}
             className="absolute top-6 right-6 text-zinc-400 hover:text-white transition-colors z-10"
           >
             <X className="w-8 h-8" />
