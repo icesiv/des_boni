@@ -7,7 +7,6 @@ import {
   Menu,
   ArrowDown,
   ShoppingBag,
-  Trophy,
   ArrowRight,
   Pencil,
   Paintbrush,
@@ -388,7 +387,7 @@ export function NewHome() {
       </section>
 
       {/* Portfolio Section */}
-      <section id="work" className="py-24 relative" ref={el => sectionsRef.current[0] = el}>
+      <section id="work" className="py-24 relative" ref={el => { sectionsRef.current[0] = el; }}>
         <div className="max-w-7xl mx-auto px-6 md:px-12">
           <div className="mb-16">
             <span className="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-orange-500 mb-4">
@@ -441,7 +440,7 @@ export function NewHome() {
       </section>
 
       {/* ArtStation Store Section */}
-      <section id="store" className="py-24 relative border-t border-zinc-800/50" ref={el => sectionsRef.current[1] = el}>
+      <section id="store" className="py-24 relative border-t border-zinc-800/50" ref={el => { sectionsRef.current[1] = el; }}>
         <div className="absolute inset-0 bg-gradient-to-b from-orange-900/5 to-transparent pointer-events-none"></div>
         <div className="max-w-7xl mx-auto px-6 md:px-12 relative z-10">
           <div className="mb-16">
@@ -488,7 +487,7 @@ export function NewHome() {
       </section>
 
       {/* About Section */}
-      <section id="about" className="py-24 border-t border-zinc-800/50" ref={el => sectionsRef.current[2] = el}>
+      <section id="about" className="py-24 border-t border-zinc-800/50" ref={el => { sectionsRef.current[2] = el; }}>
         <div className="max-w-7xl mx-auto px-6 md:px-12">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="relative flex flex-wrap justify-center gap-x-8 gap-y-12">
@@ -607,7 +606,7 @@ export function NewHome() {
       </section>
 
       {/* Contact Section */}
-      <section id="contact" className="py-24 border-t border-zinc-800/50" ref={el => sectionsRef.current[3] = el}>
+      <section id="contact" className="py-24 border-t border-zinc-800/50" ref={el => { sectionsRef.current[3] = el; }}>
         <div className="max-w-3xl mx-auto px-6 md:px-12">
           <div className="text-center mb-12">
             <span className="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-orange-500 mb-4">
