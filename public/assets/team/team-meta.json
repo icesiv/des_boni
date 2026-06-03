@@ -1,20 +1,26 @@
 [
   {
-    "filename": "1774453264870_boni.jpg",
-    "name": "boni",
+    "filename": "1777227622141_01c.jpg",
+    "name": "SM BONIN",
     "role": "Proprietor",
     "order": 0
   },
   {
-    "filename": "1774426923308_team_4.jpg",
-    "name": "LUTHFUN NAHAR",
-    "role": "Managing Diredtor",
-    "order": 1
+    "filename": "1777227662376_LUTFUN NAHAR c.jpg",
+    "name": "LUTFUN NAHAR ",
+    "role": "Managing Director ",
+    "order": 0
   },
   {
-    "filename": "1774426974052_team_1.jpg",
+    "filename": "1777227680592_Ashim Ahamed_v3.jpg",
     "name": "ASHIM AHAMED",
     "role": "Director",
-    "order": 2
+    "order": 0
+  },
+  {
+    "filename": "1777227705019_Imtiazul Anindo.jpeg",
+    "name": "IMTAZUL ANINDO",
+    "role": "Marketing Manager ",
+    "order": 0
   }
 ]
